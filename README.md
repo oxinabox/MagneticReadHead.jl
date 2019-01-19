@@ -5,3 +5,7 @@
 [![Build Status](https://travis-ci.com/oxinabox/MagneticReadHead.jl.svg?branch=master)](https://travis-ci.com/oxinabox/MagneticReadHead.jl)
 [![Build Status](https://ci.appveyor.com/api/projects/status/github/oxinabox/MagneticReadHead.jl?svg=true)](https://ci.appveyor.com/project/oxinabox/MagneticReadHead-jl)
 [![Coveralls](https://coveralls.io/repos/github/oxinabox/MagneticReadHead.jl/badge.svg?branch=master)](https://coveralls.io/github/oxinabox/MagneticReadHead.jl?branch=master)
+
+
+
+[![asciicast](https://asciinema.org/a/Xmr69JEXe5sgIpyxgTsFmoJRA.svg)](https://asciinema.org/a/Xmr69JEXe5sgIpyxgTsFmoJRA)

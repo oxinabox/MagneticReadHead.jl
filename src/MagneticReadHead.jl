@@ -4,7 +4,7 @@ using Cassette
 using MacroTools
 
 
-export set_breakpoint
+export set_breakpoint, demo
 
 
 Cassette.@context MagneticCtx;
