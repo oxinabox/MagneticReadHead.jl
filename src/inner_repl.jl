@@ -8,9 +8,16 @@ function argnames(f, args)
     meth = only(methods(f, typeof.(args)))
     names = Base.method_argnames(meth)[2:end] # first is self
 
-    return Dict(zip(names, args))
+    return OrderedDict(zip(names, args))
 end
 
+"""
+    subnames(name2arg, ast)
+
+Subsitute the values from the dict `name2arg`
+into the ast,
+where ever the keys (names) occur.
+"""
 subnames(name2arg, x::Any) = x # fallback, for literals
 subnames(name2arg, name::Symbol) = get(name2arg, name, name)
 function subnames(name2arg, code::Expr)
@@ -36,6 +43,20 @@ function get_user_input(io=stdin)
         ast isa Expr && ast.head == :incomplete || break
     end
     return ast
+end
+
+
+function eval_and_display(code_ast)
+    try
+        res = eval(code_ast)
+        if res != nothing
+            display(res)
+        end
+    catch err
+        printstyled("ERROR: ", color=:red)
+        showerror(stdout, err)
+        println()
+    end
 end
 
 

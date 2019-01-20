@@ -19,7 +19,6 @@ end
 
 ##### Breakpoint Definitions
 
-
 # Function breakpoint -- break on all methods of a function
 function set_breakpoint(f::F) where F
     if length(methods(f)) == 0
@@ -40,12 +39,16 @@ end
 # Universal Breakpoint -- break on every call
 # TODO: Change this to be more general than just Base.Callable
 function set_breakpoint()
-    @eval function Cassette.overdub(ctx::MagneticCtx, fi::Base.Callable, zargs...)
-        break_action(ctx, fi, zargs...)
+    @eval function Cassette.overdub(ctx::MagneticCtx, fi, zargs...)
+        if fi isa Core.IntrinsicFunction
+            fi(zargs...)  # Do not mess with Intrinsics
+        else
+            break_action(ctx, fi, zargs...)
+        end
     end
 end
 
 function rm_breakpoint()
-    @uneval function Cassette.overdub(ctx::MagneticCtx, fi::Base.Callable, zargs...)
+    @uneval function Cassette.overdub(ctx::MagneticCtx, fi, zargs...)
     end
 end
