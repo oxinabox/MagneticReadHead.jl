@@ -1,13 +1,17 @@
 using MagneticReadHead
 using Test
+using OrderedCollections
 
-foo(x,y) = 2
 foo(a) = 1
+foo(x,y) = 2
+foo(x,y, zs...) = 3
 
 @testset "argnames" begin
 
-    @test MagneticReadHead.argnames(foo, (1,2)) == Dict([:x=>1, :y=>2])
-    @test MagneticReadHead.argnames(foo, (3.0,)) == Dict([:a=>3.0])
+    @test MagneticReadHead.argnames(foo, (3.0,)) == OrderedDict([:a=>3.0])
+    @test MagneticReadHead.argnames(foo, (1,2)) == OrderedDict([:x=>1, :y=>2])
+    @test MagneticReadHead.argnames(foo, (1,2,3,4,5)) ==
+        OrderedDict([:x=>1, :y=>2, :zs=>(3,4,5)])
 end
 
 @testset "subnames" begin

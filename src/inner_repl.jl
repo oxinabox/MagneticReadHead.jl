@@ -7,7 +7,13 @@ returns a dict mapping the names of the arguments to their values.
 function argnames(f, args)
     meth = only(methods(f, typeof.(args)))
     names = Base.method_argnames(meth)[2:end] # first is self
-
+    
+    if length(names) < length(args)
+        main_args = args[1:length(names)-1]
+        var_args = args[length(names):end]
+        args = [main_args..., var_args]
+    end
+    @assert length(names) == length(args)
     return OrderedDict(zip(names, args))
 end
 

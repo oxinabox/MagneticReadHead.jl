@@ -7,11 +7,18 @@ const actions = OrderedDict([
 
 ################################
 
+function breadcrumbs(f, args)
+   meth = methods(f, typeof.(args)) |> only
+   printstyled("Breakpoint Hit: "; color=:blue)
+   printstyled(string(meth); color=:light_blue)
+   println()
+end
+
 function iron_repl(f, args)
-    @info "Hit breakpoint." f
+    breadcrumbs(f, args)
+    
     name2arg = argnames(f, args)
     
-    println("What do?")
     printstyled("Args: "; color=:light_yellow)
     println(join(keys(name2arg), ", "))
     printstyled("Commands: "; color=:green)
@@ -28,13 +35,12 @@ function iron_repl(f, args)
    end
 end
 
-
+##############################
 function break_on_next_call(ctx)
     set_breakpoint() # Set all break-points
     ctx.metadata.do_at_next_break_start = ()->rm_breakpoint()
     return nothing
 end
-
 
 
 function break_action(ctx, f, args...)
