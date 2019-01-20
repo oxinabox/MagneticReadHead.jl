@@ -9,12 +9,6 @@ export set_breakpoint, demo
 
 Cassette.@context MagneticCtx;
 
-# TODO Debug sessions
-# This is basically the same problem as Mocking Patch Env
-# But sessions should be user facing,
-# Breakpoints should be attached to sessions (and sessions should wrap Context)
-# Stating a new session should drop all breakpoints
-
 function nameargs(f, args)
     meth = first(methods(f, typeof.(args)))
     names = Base.method_argnames(meth)[2:end] # first is self
