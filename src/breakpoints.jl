@@ -41,7 +41,7 @@ end
 function set_breakpoint()
     @eval function Cassette.overdub(ctx::MagneticCtx, fi, zargs...)
         if fi isa Core.IntrinsicFunction
-            fi(zargs...)  # Do not mess with Intrinsics
+            fi(zargs...) # Do not mess with Intrinsics
         else
             break_action(ctx, fi, zargs...)
         end

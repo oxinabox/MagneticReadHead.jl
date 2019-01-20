@@ -14,7 +14,7 @@ function breadcrumbs(f, args)
    println()
 end
 
-function iron_repl(f, args)
+function iron_repl(f, args, eval_module)
     breadcrumbs(f, args)
     
     name2arg = argnames(f, args)
@@ -31,7 +31,7 @@ function iron_repl(f, args)
             return code_ast # Send the codeword back
         end
         code_ast = subnames(name2arg, code_ast)
-        eval_and_display(code_ast)
+        eval_and_display(code_ast, eval_module)
    end
 end
 
@@ -49,9 +49,10 @@ function break_action(ctx, f, args...)
     
     ctx.metadata.do_at_next_break_start()  # Do anything we have queued
     ctx.metadata.do_at_next_break_start = ()->nothing  # whipe it
+    
+    eval_module = ctx.metadata.eval_module
 
-
-    start_code_word = iron_repl(f, args)
+    start_code_word = iron_repl(f, args, eval_module)
     if start_code_word == :StepIn
         break_on_next_call(ctx)
     end

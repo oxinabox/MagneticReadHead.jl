@@ -2,6 +2,7 @@ module MagneticReadHead
 
 using Cassette
 using MacroTools
+using Mocking
 using OrderedCollections
 using Revise: get_method, sigex2sigts, get_signature
 
@@ -16,13 +17,14 @@ include("breakpoints.jl")
 
 
 mutable struct MagneticMetadata
+    eval_module::Module
     do_at_next_break_start::Any
 end
-MagneticMetadata() = MagneticMetadata(()->nothing)
+MagneticMetadata(eval_module) = MagneticMetadata(eval_module, ()->nothing)
 
 macro iron_debug(body)
     quote
-        ctx = Cassette.disablehooks(MagneticCtx(;metadata=MagneticMetadata()))
+        ctx = Cassette.disablehooks(MagneticCtx(;metadata=MagneticMetadata($(__module__))))
         Cassette.recurse(ctx, ()->$(esc(body)))
     end
 end
