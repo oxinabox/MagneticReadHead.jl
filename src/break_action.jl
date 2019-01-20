@@ -1,9 +1,8 @@
-
-const actions = OrderedDict([
-    :Continue => nothing,
-    :StepIn => nothing,
-    :StepNext => nothing
-])
+const actions = (
+    :Continue,
+    :StepIn,
+    :StepNext,
+    :Abort)
 
 ################################
 
@@ -22,12 +21,12 @@ function iron_repl(f, args, eval_module)
     printstyled("Args: "; color=:light_yellow)
     println(join(keys(name2arg), ", "))
     printstyled("Commands: "; color=:green)
-    println(join(keys(actions), ", "))
+    println(join(actions, ", "))
     
     local code_ast
     while true
         code_ast = get_user_input()
-        if haskey(actions, code_ast)
+        if code_ast ∈ actions
             return code_ast # Send the codeword back
         end
         code_ast = subnames(name2arg, code_ast)
@@ -36,6 +35,7 @@ function iron_repl(f, args, eval_module)
 end
 
 ##############################
+
 function break_on_next_call(ctx)
     set_breakpoint() # Set all break-points
     ctx.metadata.do_at_next_break_start = ()->rm_breakpoint()
@@ -55,6 +55,8 @@ function break_action(ctx, f, args...)
     start_code_word = iron_repl(f, args, eval_module)
     if start_code_word == :StepIn
         break_on_next_call(ctx)
+    elseif start_code_word == :Abort
+        throw(UserAbortedException())
     end
     
     ans = Cassette.recurse(ctx, f, args...)

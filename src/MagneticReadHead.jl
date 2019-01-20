@@ -16,6 +16,8 @@ include("break_action.jl")
 include("breakpoints.jl")
 
 
+struct UserAbortedException <: Exception end
+
 mutable struct MagneticMetadata
     eval_module::Module
     do_at_next_break_start::Any
@@ -25,7 +27,12 @@ MagneticMetadata(eval_module) = MagneticMetadata(eval_module, ()->nothing)
 macro iron_debug(body)
     quote
         ctx = Cassette.disablehooks(MagneticCtx(;metadata=MagneticMetadata($(__module__))))
-        Cassette.recurse(ctx, ()->$(esc(body)))
+        try
+            Cassette.recurse(ctx, ()->$(esc(body)))
+        catch err
+            err isa UserAbortedException || rethrow()
+            nothing
+        end
     end
 end
 
