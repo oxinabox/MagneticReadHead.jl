@@ -44,8 +44,6 @@ end
 
 
 @testset "Abort" begin
-    # I am dubious as to if this test is actually getting hit
-    # I think may be running into a julia bug
     patch = make_readline_patch(["Abort"])
 
     apply(patch) do
