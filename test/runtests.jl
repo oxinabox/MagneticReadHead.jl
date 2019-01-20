@@ -2,7 +2,8 @@ using MagneticReadHead
 using Test
 
 test_files = [
-    "test_inner_repl.jl"
+    "test_inner_repl.jl",
+    "test_utils.jl",
 ]
 
 @testset "MagneticReadHead" begin

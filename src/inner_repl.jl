@@ -1,6 +1,11 @@
+"""
+    argnames(f, args)
 
+For a function `f` with the arguments `args`
+returns a dict mapping the names of the arguments to their values.
+"""
 function argnames(f, args)
-    meth = first(methods(f, typeof.(args)))
+    meth = only(methods(f, typeof.(args)))
     names = Base.method_argnames(meth)[2:end] # first is self
 
     return Dict(zip(names, args))
@@ -14,6 +19,9 @@ function subnames(name2arg, code::Expr)
         get(name2arg, name, name)  # If we have a value for it swap it in. 
     end
 end
+
+
+###############
 
 function get_user_input(io=stdin)
     printstyled("iron>"; color=:light_red)
@@ -30,31 +38,4 @@ function get_user_input(io=stdin)
     return ast
 end
 
-
-function break_action(f, args...)
-    @info "Hit breakpoint." f
-
-    name2arg = argnames(f, args)
-    
-    println("What do?")
-    printstyled("Args: "; color=:light_yellow)
-    println(join(keys(name2arg), ", "))
-    println("Enter `Continue` to move on`")
-    
-    local code_ast
-    while true
-        code_ast = get_user_input()
-        code_ast == :Continue && break
-        code_ast = subnames(name2arg, code_ast)
-        try
-            res = eval(code_ast)
-            res === nothing && continue
-            display(res)
-        catch err
-            printstyled("ERROR: ", color=:red)
-            showerror(stdout, err)
-            println()
-        end
-    end
-end
 
