@@ -13,6 +13,9 @@ macro uneval(expr)
         sig = get_signature($(Expr(:quote, expr)))
         sigt = only(sigex2sigts(@__MODULE__, sig))
         meth = get_method(sigt)
+        if meth == nothing
+            @info "Method not found, thus not removed."
+        end
         Base.delete_method(meth)
     end
 end

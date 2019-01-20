@@ -59,7 +59,7 @@ function break_action(ctx, f, args...)
         throw(UserAbortedException())
     end
     
-    ans = Cassette.recurse(ctx, f, args...)
+    ans = Base.invokelatest(Cassette.recurse, ctx, f, args...)
     
     if start_code_word == :StepNext
         break_on_next_call(ctx)
