@@ -15,8 +15,9 @@ macro uneval(expr)
         meth = get_method(sigt)
         if meth == nothing
             @info "Method not found, thus not removed."
+        else
+            Base.delete_method(meth)
         end
-        Base.delete_method(meth)
     end
 end
 

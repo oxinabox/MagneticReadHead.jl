@@ -1,5 +1,6 @@
 module MagneticReadHead
 
+using Base: invokelatest
 using Cassette
 using MacroTools
 using Mocking

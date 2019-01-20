@@ -38,7 +38,10 @@ end
 
 function break_on_next_call(ctx)
     set_breakpoint() # Set all break-points
-    ctx.metadata.do_at_next_break_start = ()->Base.invokelatest(rm_breakpoint)
+    ctx.metadata.do_at_next_break_start = function()
+       @info "ENDING STEPPING MODE"
+       rm_breakpoint()
+    end
     return nothing
 end
 
