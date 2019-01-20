@@ -9,7 +9,7 @@ const actions = OrderedDict([
 
 function breadcrumbs(f, args)
    meth = methods(f, typeof.(args)) |> only
-   printstyled("Breakpoint Hit: "; color=:blue)
+   printstyled("\nBreakpoint Hit: "; color=:blue)
    printstyled(string(meth); color=:light_blue)
    println()
 end
