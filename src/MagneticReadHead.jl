@@ -15,7 +15,7 @@ Cassette.@context MagneticCtx;
 # Breakpoints should be attached to sessions (and sessions should wrap Context)
 # Stating a new session should drop all breakpoints
 
-function nameargs(f, args)
+function argnames(f, args)
     meth = first(methods(f, typeof.(args)))
     names = Base.method_argnames(meth)[2:end] # first is self
 
@@ -50,7 +50,7 @@ end
 function break_action(f, args...)
     @info "Hit breakpoint." f
 
-    name2arg = nameargs(f, args)
+    name2arg = argnames(f, args)
     
     println("What do?")
     printstyled("Args: "; color=:light_yellow)
