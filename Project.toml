@@ -6,11 +6,6 @@ version = "0.1.0"
 [deps]
 Cassette = "7057c7e9-c182-5462-911a-8362d720325c"
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
-Rebugger = "ee283ea6-eecd-56e3-beb3-83eb4d3c31e9"
-Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-
-[targets]
-test = ["Test"]
