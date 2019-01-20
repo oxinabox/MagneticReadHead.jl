@@ -7,5 +7,18 @@
 [![Coveralls](https://coveralls.io/repos/github/oxinabox/MagneticReadHead.jl/badge.svg?branch=master)](https://coveralls.io/github/oxinabox/MagneticReadHead.jl?branch=master)
 
 
+# Commands
+
+`@iron_debug foo()`: run `foo()` inside the debugger.
+When a breakpoint is hit, then you will be given an Iron REPL to work with-in,
+allowing you to view/manipulate the arguments.
+
+## Breakpoints
+
+ - `set_breakpoint()`: Set a breakpoint on every function call.
+ - `set_breakpoint(f)`: Set a breakpoint on call to the function `f`
+
+
+
 
 [![asciicast](https://asciinema.org/a/Xmr69JEXe5sgIpyxgTsFmoJRA.svg)](https://asciinema.org/a/Xmr69JEXe5sgIpyxgTsFmoJRA)
