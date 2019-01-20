@@ -2,12 +2,11 @@ module MagneticReadHead
 
 using Cassette
 using MacroTools
+using Revise: get_method, sigex2sigts, get_signature
 
 
-export set_breakpoint, @iron_debug
+export set_breakpoint, rm_breakpoint, @iron_debug
 
-
-Cassette.@context MagneticCtx;
 
 include("utils.jl")
 include("inner_repl.jl")
