@@ -7,7 +7,9 @@ end
 
 function eg2(x)
     y=2x
-    eg3(x,y)
+    ret = eg3(x,y)
+    y = 1 + y
+    return ret
 end
 
 function eg3(a,b)

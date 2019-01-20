@@ -38,7 +38,7 @@ end
 
 function break_on_next_call(ctx)
     set_breakpoint() # Set all break-points
-    ctx.metadata.do_at_next_break_start = ()->rm_breakpoint()
+    ctx.metadata.do_at_next_break_start = ()->Base.invokelatest(rm_breakpoint)
     return nothing
 end
 
@@ -66,4 +66,11 @@ function break_action(ctx, f, args...)
     end
 
     return ans
+end
+
+function do_not_break_action(ctx, f, args...)
+    ctx.metadata.do_at_next_break_start()  # Do anything we have queued
+    ctx.metadata.do_at_next_break_start = ()->nothing  # whipe it
+
+    f(args...)
 end
