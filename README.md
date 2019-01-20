@@ -1,4 +1,4 @@
-# MagneticReadHead
+# MagneticReadHead ![https://www.tidyverse.org/lifecycle/#experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)
 
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://oxinabox.github.io/MagneticReadHead.jl/stable)
 [![Latest](https://img.shields.io/badge/docs-latest-blue.svg)](https://oxinabox.github.io/MagneticReadHead.jl/latest)
@@ -20,5 +20,4 @@ allowing you to view/manipulate the arguments.
 
 
 
-
-[![asciicast](https://asciinema.org/a/Xmr69JEXe5sgIpyxgTsFmoJRA.svg)](https://asciinema.org/a/Xmr69JEXe5sgIpyxgTsFmoJRA)
+[![asciicast](https://asciinema.org/a/PnffnrsqEkX8Oum71KY9sWMue.svg)](https://asciinema.org/a/PnffnrsqEkX8Oum71KY9sWMue)
