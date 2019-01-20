@@ -45,6 +45,7 @@ function get_user_input(io=stdin)
         # Very cut down REPL input code
         # https://github.com/JuliaLang/julia/blob/b8c0ec8a0a2d12533edea72749b37e6089a9d163/stdlib/REPL/src/REPL.jl#L237
         line *= @mock readline(io)
+        length(line) == 0 && break
         ast = Base.parse_input_line(line)
         ast isa Expr && ast.head == :incomplete || break
     end
