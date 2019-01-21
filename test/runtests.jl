@@ -29,7 +29,6 @@ module CanHaveNoBreakpoints
             @test 6 == @iron_debug eg1()
         end
         @test record == []
-
     end
 end
 
@@ -104,4 +103,6 @@ end
 
 
 #########################################
-include("run_non_ui_tests.jl"")
+
+println("\n**************************************************")
+include("run_non_ui_tests.jl")
