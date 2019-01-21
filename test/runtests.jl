@@ -1,6 +1,13 @@
 
 #==
 Note to test implementers:
+ - For reasons, all user interaction test must go in this file
+ - They can't be `include`ed AFIACT, or the mocks miss some-how.
+ - All other tests should go in `run_non_ui_tests.jl`
+   which is included in bottom of this file.
+
+In this file of User Interaction Tests:
+
  - All tests go in their own module so that breakpoints can't leak
  - They can not leak because the examples functions we break on are
    reincluded anew in each module, thus giving them distinct identity.
@@ -11,8 +18,24 @@ Note to test implementers:
  - The setup_ui_test_module.jl file defines things that each test module needs
 ==#
 
+module CanHaveNoBreakpoints
+    include("setup_ui_test_module.jl")
 
-module BasicUI
+    @testset "$(@__MODULE__)" begin
+        p_readline = make_readline_patch([])
+        p_breadcrumbs, record = make_recording_breadcrumbs_patch()
+
+        apply([p_readline, p_breadcrumbs]) do
+            @test 6 == @iron_debug eg1()
+        end
+        @test record == []
+
+    end
+end
+
+
+
+module CanHave1Breakpoint
     include("setup_ui_test_module.jl")
 
     @testset "$(@__MODULE__)" begin
@@ -23,12 +46,32 @@ module BasicUI
         apply([p_readline, p_breadcrumbs]) do
             @test 6 == @iron_debug eg1()
         end
-        @show record
         @test first(record).f == eg2
-
     end
 end
 
+module CanHave2Breakpoints
+    include("setup_ui_test_module.jl")
+
+    @testset "$(@__MODULE__)" begin
+        p_readline = make_readline_patch(["Continue", "Continue"])
+        p_breadcrumbs, record = make_recording_breadcrumbs_patch()
+
+        set_breakpoint(eg2)
+        set_breakpoint(eg3)
+        apply([p_readline, p_breadcrumbs]) do
+            @test 6 == @iron_debug eg1()
+        end
+        @test first.(record) == [eg2, eg3]
+    end
+end
+
+
+
+
+
+
+####
 module InfluenceCallingEnviroment
     include("setup_ui_test_module.jl")
 
@@ -59,4 +102,6 @@ module Abort
     end
 end
 
-include("runtests.jl")
+
+#########################################
+include("run_non_ui_tests.jl"")

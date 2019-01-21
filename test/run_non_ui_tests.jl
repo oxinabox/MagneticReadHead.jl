@@ -12,5 +12,3 @@ test_files = [
     end
 end
 
-
-#include("test_user_interaction.jl")
