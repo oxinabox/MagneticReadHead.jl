@@ -17,6 +17,14 @@ function make_readline_patch(text_queue)
     end
 end
 
-include("demo.jl")
+function make_recording_breadcrumbs_patch()
+    record = []
+    patch = @patch function breadcrumbs(f, args)
+        @show f
+        push!(record, (f=f, args=args))
+    end
+    return patch, record
+end
 
+include("demo.jl")
 

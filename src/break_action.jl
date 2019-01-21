@@ -14,7 +14,7 @@ function breadcrumbs(f, args)
 end
 
 function iron_repl(f, args, eval_module)
-    breadcrumbs(f, args)
+    @mock breadcrumbs(f, args)
     
     name2arg = argnames(f, args)
     
