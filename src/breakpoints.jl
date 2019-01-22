@@ -63,7 +63,7 @@ end
 
 function set_breakpoint_for_every_call()
     @eval function Cassette.overdub(ctx::MagneticCtx, fi, zargs...)
-        if fi isa Core.IntrinsicFunction || ctx.metadata.stepping_mode == false #HACK: double check incase cassette is 256ing
+        if fi isa Core.Builtin || ctx.metadata.stepping_mode == false #HACK: double check incase cassette is 256ing
             do_not_break_action(ctx, fi, zargs...) # Do not mess with Intrinsics
         else
             break_action(ctx, fi, zargs...)
