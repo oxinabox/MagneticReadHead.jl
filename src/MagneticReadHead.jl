@@ -34,7 +34,10 @@ macro iron_debug(body)
         catch err
             err isa UserAbortedException || rethrow()
             nothing
+        finally
+            disengage_stepping_mode!(ctx)
         end
+
     end
 end
 

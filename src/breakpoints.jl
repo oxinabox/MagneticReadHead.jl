@@ -56,6 +56,7 @@ function engage_stepping_mode!(ctx)
 end
 
 function disengage_stepping_mode!(ctx)
+    ctx.metadata.stepping_mode=falsei && return
     ctx.metadata.stepping_mode=false
     rm_breakpoint_for_every_call()
 end
