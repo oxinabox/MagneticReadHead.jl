@@ -21,3 +21,21 @@ allowing you to view/manipulate the arguments.
 
 
 [![asciicast](https://asciinema.org/a/PnffnrsqEkX8Oum71KY9sWMue.svg)](https://asciinema.org/a/PnffnrsqEkX8Oum71KY9sWMue)
+
+
+## MagneticReadHead Vs Rebugger
+[Rebugger](https://github.com/timholy/Rebugger.jl) is the another debugging package for Julia.
+Rebugger is a very nontraditional rebugger, MagneticReadHead is a lot closer to a traditional debugger.
+
+They are complementary tools that can both be used in the same project.
+Rebugger has has a user interface based on scooping the code of any function it steps into, into the REPL.
+Then allow you to point your cursor at a function and step into that one.
+Rebugger lets you edit the code at each step.
+MagneticReadHead lets you run code to inspect variables or save data,
+but you can not edit the code itself.
+
+You can step backwards up the call-stack in Rebugger, MagneticReadHead does not support that (yet).
+MagneticReadHead lets you set breakpoints, Rebugger does not support that (yet).
+
+Rebugger is based on Revise.jl,
+MagneticReadHead is based on Cassette.jl and uses Revise.jl as a helper library.
