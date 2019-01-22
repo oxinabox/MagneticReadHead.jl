@@ -1,3 +1,6 @@
+
+methodof(f, args) = only(methods(f, typeof.(args)))
+
 """
     argnames(f, args)
 
@@ -5,7 +8,7 @@ For a function `f` with the arguments `args`
 returns a dict mapping the names of the arguments to their values.
 """
 function argnames(f, args)
-    meth = only(methods(f, typeof.(args)))
+    meth = methodof(f, args) 
     names = Base.method_argnames(meth)[2:end] # first is self
     
     if length(names) < length(args)

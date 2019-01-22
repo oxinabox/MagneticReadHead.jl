@@ -15,7 +15,7 @@ include("utils.jl")
 include("inner_repl.jl")
 include("breakpoints.jl")
 include("break_action.jl")
-
+include("detailed.jl")
 
 struct UserAbortedException <: Exception end
 
