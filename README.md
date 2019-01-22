@@ -34,7 +34,10 @@ MagneticReadHead lets you run code to inspect variables or save data,
 but you can not edit the code itself.
 
 You can step backwards up the call-stack in Rebugger, MagneticReadHead does not support that (yet).
-MagneticReadHead lets you set breakpoints, Rebugger does not support that (yet).
+MagneticReadHead lets you set breakpoints (on function calls), Rebugger does not support that (yet).
+
+MagneticReadHead currently only lets you examine the arguments going into a function.
+Rebugger lets you manipulate the function body however you want (So you can add `@show` to examine the local variables.
 
 Rebugger is based on Revise.jl,
 MagneticReadHead is based on Cassette.jl and uses Revise.jl as a helper library.
