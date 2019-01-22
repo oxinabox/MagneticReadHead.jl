@@ -2,8 +2,11 @@
 
 
 function eg1()
-    eg2(2)
+    z = eg2(2)
+    eg_last(z)
 end
+
+eg_last(x) = x
 
 function eg2(x)
     y=eg21(x)

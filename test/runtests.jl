@@ -66,9 +66,9 @@ module CanHave2Breakpoints
 end
 
 #########################################################
+ # Stepping Mode
 
-
-module CanHave1BreakpointThenStepIntoThenContinue
+module CanHave1BreakpointThenStepInThenContinue
     include("setup_ui_test_module.jl")
 
     @testset "$(@__MODULE__)" begin
@@ -83,10 +83,27 @@ module CanHave1BreakpointThenStepIntoThenContinue
     end
 end
 
-#
+ 
+module RunningStepNextWhenThereIsNoNextDoesNotCauseNextDebugRunToStep
+    include("setup_ui_test_module.jl")
+
+    @testset "$(@__MODULE__)" begin
+        p_readline = make_readline_patch(["StepNext", "Continue"])
+        p_breadcrumbs, record = make_recording_breadcrumbs_patch()
+
+        set_breakpoint(eg_last)
+        apply([p_readline, p_breadcrumbs]) do
+            @iron_debug eg1()
+            @iron_debug eg1()
+         end
+        @test first.(record) == [eg_last, eg_last]
+    end
+end
+
+     
 
 ###############################################
-module InfluenceCallingEnviroment
+module CanInfluenceCallingEnviroment
     include("setup_ui_test_module.jl")
 
     @testset "$(@__MODULE__)" begin
