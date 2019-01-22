@@ -15,7 +15,6 @@ allowing you to view/manipulate the arguments.
 
 ## Breakpoints
 
- - `set_breakpoint()`: Set a breakpoint on every function call.
  - `set_breakpoint(f)`: Set a breakpoint on call to the function `f`
 
 

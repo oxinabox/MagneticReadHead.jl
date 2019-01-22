@@ -39,12 +39,30 @@ function rm_breakpoint(f::F) where F
     end
 end
 
-
+##############################################################################################################
+# Stepping Mode
+#
 # Universal Breakpoint -- break on every call
-# TODO: Change this to be more general than just Base.Callable
-function set_breakpoint()
+
+function engage_stepping_mode!(ctx)
+    ctx.metadata.stepping_mode=true
+    set_breakpoint_for_every_call()
+
+    ctx.metadata.do_at_next_break_start = function()
+        disengage_stepping_mode!(ctx)
+        ctx.metadata.do_at_next_break_start = () -> nothing # Remove myself
+        return nothing
+    end
+end
+
+function disengage_stepping_mode!(ctx)
+    ctx.metadata.stepping_mode=false
+    rm_breakpoint_for_every_call()
+end
+
+function set_breakpoint_for_every_call()
     @eval function Cassette.overdub(ctx::MagneticCtx, fi, zargs...)
-        if fi isa Core.IntrinsicFunction
+        if fi isa Core.IntrinsicFunction || ctx.metadata.stepping_mode == false #HACK: double check incase cassette is 256ing
             do_not_break_action(ctx, fi, zargs...) # Do not mess with Intrinsics
         else
             break_action(ctx, fi, zargs...)
@@ -52,7 +70,7 @@ function set_breakpoint()
     end
 end
 
-function rm_breakpoint()
+function rm_breakpoint_for_every_call()
     @uneval function Cassette.overdub(ctx::MagneticCtx, fi, zargs...)
     end
 end

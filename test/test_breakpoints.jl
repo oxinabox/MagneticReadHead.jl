@@ -23,7 +23,11 @@ end
 @testset "Add and Remove" begin
         
     @testset "Universal Breakpoint" begin
-        @before_after_test(set_breakpoint(), rm_breakpoint())
+        # Internal
+        @before_after_test(
+            MagneticReadHead.set_breakpoint_for_every_call(),
+            MagneticReadHead.rm_breakpoint_for_every_call(),
+        )
     end
          
     @testset "Function Breakpoint" begin

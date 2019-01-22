@@ -22,8 +22,9 @@ struct UserAbortedException <: Exception end
 mutable struct MagneticMetadata
     eval_module::Module
     do_at_next_break_start::Any
+    stepping_mode::Bool
 end
-MagneticMetadata(eval_module) = MagneticMetadata(eval_module, ()->nothing)
+MagneticMetadata(eval_module) = MagneticMetadata(eval_module, ()->nothing, false)
 
 macro iron_debug(body)
     quote

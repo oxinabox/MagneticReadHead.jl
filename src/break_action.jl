@@ -36,14 +36,6 @@ end
 
 ##############################
 
-function break_on_next_call(ctx)
-    set_breakpoint() # Set all break-points
-    ctx.metadata.do_at_next_break_start = function()
-       @info "ENDING STEPPING MODE"
-       rm_breakpoint()
-    end
-    return nothing
-end
 
 
 function break_action(ctx, f, args...)
@@ -51,13 +43,12 @@ function break_action(ctx, f, args...)
     # It is called by all breakpoint overdubs
     
     ctx.metadata.do_at_next_break_start()  # Do anything we have queued
-    ctx.metadata.do_at_next_break_start = ()->nothing  # whipe it
     
     eval_module = ctx.metadata.eval_module
 
     start_code_word = iron_repl(f, args, eval_module)
     if start_code_word == :StepIn
-        break_on_next_call(ctx)
+        engage_stepping_mode!(ctx)
     elseif start_code_word == :Abort
         throw(UserAbortedException())
     end
@@ -65,7 +56,7 @@ function break_action(ctx, f, args...)
     ans = Base.invokelatest(Cassette.recurse, ctx, f, args...)
     
     if start_code_word == :StepNext
-        break_on_next_call(ctx)
+        engage_stepping_mode!(ctx)
     end
 
     return ans
@@ -73,7 +64,10 @@ end
 
 function do_not_break_action(ctx, f, args...)
     ctx.metadata.do_at_next_break_start()  # Do anything we have queued
-    ctx.metadata.do_at_next_break_start = ()->nothing  # whipe it
-
-    f(args...)
-end
+   
+    if f isa Core.IntrinsicFunction
+       f(args...)
+    else
+       Base.invokelatest(Cassette.recurse, ctx, f, args...)
+    end
+ end
