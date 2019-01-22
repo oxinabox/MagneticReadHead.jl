@@ -26,7 +26,7 @@ module CanHaveNoBreakpoints
         p_breadcrumbs, record = make_recording_breadcrumbs_patch()
 
         apply([p_readline, p_breadcrumbs]) do
-            @test 6 == @iron_debug eg1()
+            @iron_debug eg1()
         end
         @test record == []
     end
@@ -43,7 +43,7 @@ module CanHave1Breakpoint
 
         set_breakpoint(eg2)
         apply([p_readline, p_breadcrumbs]) do
-            @test 6 == @iron_debug eg1()
+            @iron_debug eg1()
         end
         @test first(record).f == eg2
     end
@@ -59,18 +59,33 @@ module CanHave2Breakpoints
         set_breakpoint(eg2)
         set_breakpoint(eg3)
         apply([p_readline, p_breadcrumbs]) do
-            @test 6 == @iron_debug eg1()
+            @iron_debug eg1()
         end
         @test first.(record) == [eg2, eg3]
     end
 end
 
+#########################################################
 
 
+module CanHave1BreakpointThenStepIntoThenContinue
+    include("setup_ui_test_module.jl")
 
+    @testset "$(@__MODULE__)" begin
+        p_readline = make_readline_patch(["StepIn", "Continue"])
+        p_breadcrumbs, record = make_recording_breadcrumbs_patch()
 
+        set_breakpoint(eg2)
+        apply([p_readline, p_breadcrumbs]) do
+            @iron_debug eg1()
+        end
+        @test first.(record) == [eg2, eg21]
+    end
+end
 
-####
+#
+
+###############################################
 module InfluenceCallingEnviroment
     include("setup_ui_test_module.jl")
 
@@ -84,7 +99,6 @@ module InfluenceCallingEnviroment
             @iron_debug eg1()
         end
     end
-    @show zzz
 end
 
 

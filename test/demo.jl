@@ -6,11 +6,13 @@ function eg1()
 end
 
 function eg2(x)
-    y=2x
+    y=eg21(x)
     ret = eg3(x,y)
     y = 1 + y
     return ret
 end
+
+eg21(x) = 2x
 
 function eg3(a,b)
     a+b
