@@ -1,25 +1,33 @@
 
 
-#TODO make this a struct, but for now it is a named tuple for dev'ing
 
 
 Cassette.@context HandEvalCtx
 
 
-function Cassette.overdub(ctx::HandEvalCtx, f, args...)
+#function Cassette.overdub(ctx::HandEvalCtx, f, args...)
+#end
+
+function Cassette.overdub(ctx::HandEvalCtx, f, callback, args...)
+    if Cassette.canrecurse(ctx, f, args...)
+        _ctx = Cassette.similarcontext(ctx, metadata = callback)
+        return Cassette.recurse(_ctx, f, args...) # return result, callback
+    else
+        return Cassette.fallback(ctx, f, args...), callback
+    end
 end
 
-hand_eval(f::Core.Builtin, args) = f(args...)
 
 
-Cassette.@pass function map_assignments(::Type{<:HandEvalCtx}, reflection::Cassette.Reflection)
-    ir = reflection.code_info
-    
+
+slotname(ir::Core.CodeInfo, slotnum) = ir.slotnames[slotnum.id]  #1 is #self
+
+function map_assignments(::Type{<:HandEvalCtx}, reflection::Cassette.Reflection)
+    ir::Core.CodeInfo = reflection.code_info
     # Setup
-    callbackslotname = gensym("callback")
-    push!(ir.slotnames, callbackslotname)
+    push!(ir.slotnames, gensym("mdata"))
     push!(ir.slotflags, 0x00)
-    metadata_slot = SlotNumber(length(ir.slotnames))
+    metadata_slot = Core.SlotNumber(length(ir.slotnames))
     getmetadata = Expr(:call, Expr(:nooverdub, GlobalRef(Core, :getfield)), Expr(:contextslot), QuoteNode(:metadata))
 
     # insert the initial `metadata slot` assignment into the IR.
@@ -31,34 +39,33 @@ Cassette.@pass function map_assignments(::Type{<:HandEvalCtx}, reflection::Casse
     # Now the real part where we determine about assigments
     # What we want to do is:
     # After every assigment: `x = foo`, insert `ctx.metadata[:x] = x`
-    slotname(slotnum::GlobalRef) = ir.slotnames[slotnum.id + 1]  #1 is #self
 
     is_assignment(stmt) = Base.Meta.isexpr(stmt, :(=))
-    stmtcount(stmt, i) = 2is_assignment(stmt)
+    stmtcount(stmt, i) = is_assignment(stmt) ? 2 : nothing
     
     function newstmts(stmt, i)
-        if is_assignment(stmt)
-            lhs = stmt.args[1]
-            name = slotname(lhs)
-            record = Expr(
-                :(=),
-                Expr(
-                    :call,
-                    Expr(:nooverdub, GlobalRef(Base, :setindex!)),
-                    getmetadata,
-                    lhs,
-                    name
-                )
+        lhs = stmt.args[1]
+        name = slotname(ir, lhs)
+        @show name
+        record = Expr(
+            :(=),
+            Expr(
+                :call,
+                Expr(:nooverdub, GlobalRef(Base, :setindex!)),
+                metadata_slot,
+                lhs,
+                name
             )
-            
-            return [stmt, record]
-        else
-            return [stmt]
-        end
+        )
+        
+        return [stmt, record]
     end
     
-
+    Cassette.insert_statements!(ir.code, ir.codelocs, stmtcount, newstmts)
+    return ir
 end
 
+
+const handeval_pass = Cassette.@pass map_assignments
 
 
