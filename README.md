@@ -22,11 +22,18 @@ allowing you to view/manipulate the arguments.
 [![asciicast](https://asciinema.org/a/PnffnrsqEkX8Oum71KY9sWMue.svg)](https://asciinema.org/a/PnffnrsqEkX8Oum71KY9sWMue)
 
 
-## MagneticReadHead Vs Rebugger
+## Other Julia Debuggers
+
+MagneticReadHead is very early alpha.
+THere are some otehr debugging projects going on,
+and you can certainly mix and match within the same project depending on your needs.
+
+The other projects are also alpha, but almost certainly more mature than MagneticReadHead.
+
+### Rebugger
 [Rebugger](https://github.com/timholy/Rebugger.jl) is the another debugging package for Julia.
 Rebugger is a very nontraditional rebugger, MagneticReadHead is a lot closer to a traditional debugger.
 
-They are complementary tools that can both be used in the same project.
 Rebugger has has a user interface based on scooping the code of any function it steps into, into the REPL.
 Then allow you to point your cursor at a function and step into that one.
 Rebugger lets you edit the code at each step.
@@ -41,3 +48,12 @@ Rebugger lets you manipulate the function body however you want (So you can add 
 
 Rebugger is based on Revise.jl,
 MagneticReadHead is based on Cassette.jl and uses Revise.jl as a helper library.
+
+
+### ASTInterpreter2
+[ASTInterpreter2](https://github.com/JuliaDebug/ASTInterpreter2.jl) is another debugger for julia.
+Apparently it is working in 1.0. Who knew ? (not me :-P)
+I don't think it has breakpoints yet,
+but it's stepping is a lot more advanced/fine grained.
+
+I need to check it out
