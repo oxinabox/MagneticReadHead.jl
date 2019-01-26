@@ -21,9 +21,9 @@ function better_readline(stream = stdin)
     end
     if Sys.iswindows()
         # Apparently in windows it is already pretty nice
-        return readline(stream)
+        return @mock readline(stream)
     else
         #TODO: Put in raw mode, drop control characters etc
-        return readline(stream)
+        return @mock readline(stream)
     end
 end
