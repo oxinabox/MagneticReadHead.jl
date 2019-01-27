@@ -1,5 +1,7 @@
 
 
+
+
 """
     pkgdata(mod)
 
@@ -34,6 +36,27 @@ function filemap(mod::Module, file)
     return finfo.fm
 end
 
-function containing_method(mod::Module, file, linenum)
 
+
+function linerange((def, (sig, offset))::Tuple{Any, Tuple{Any, Int}})
+    return Rebugger.linerange(def, offset)
+end
+
+
+# This is not a function so just return an empty range
+linerange((def, none)::Tuple{Any, Nothing}) = 1:0
+
+
+function containing_method(mod::Module, file, linenum)
+    module_fmaps = filemap(mod, file)
+    for (inner_mod, fmaps) in module_fmaps
+        for entry in fmaps.defmap
+            def, info = entry
+            lr = linerange((def, info))
+            if linenum ∈ lr
+                sigt, offset = info
+                return sigt2methsig(sigt)
+            end
+        end
+    end
 end
