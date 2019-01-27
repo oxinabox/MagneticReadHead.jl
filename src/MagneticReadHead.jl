@@ -13,8 +13,8 @@ export set_breakpoint, rm_breakpoint, @iron_debug
 
 include("utils.jl")
 include("inner_repl.jl")
-include("break_action.jl")
 include("breakpoints.jl")
+include("break_action.jl")
 
 
 struct UserAbortedException <: Exception end
@@ -32,6 +32,7 @@ macro iron_debug(body)
         try
             Cassette.recurse(ctx, ()->$(esc(body)))
         catch err
+            @show err
             err isa UserAbortedException || rethrow()
             nothing
         finally

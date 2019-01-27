@@ -38,7 +38,7 @@ module CanHave1Breakpoint
     include("setup_ui_test_module.jl")
 
     @testset "$(@__MODULE__)" begin
-        p_readline = make_readline_patch(["Continue"])
+        p_readline = make_readline_patch(["CC"])
         p_breadcrumbs, record = make_recording_breadcrumbs_patch()
 
         set_breakpoint(eg2)
@@ -53,7 +53,7 @@ module CanHave2Breakpoints
     include("setup_ui_test_module.jl")
 
     @testset "$(@__MODULE__)" begin
-        p_readline = make_readline_patch(["Continue", "Continue"])
+        p_readline = make_readline_patch(["CC", "CC"])
         p_breadcrumbs, record = make_recording_breadcrumbs_patch()
 
         set_breakpoint(eg2)
@@ -72,7 +72,7 @@ module CanHave1BreakpointThenStepInThenContinue
     include("setup_ui_test_module.jl")
 
     @testset "$(@__MODULE__)" begin
-        p_readline = make_readline_patch(["StepIn", "Continue"])
+        p_readline = make_readline_patch(["SI", "CC"])
         p_breadcrumbs, record = make_recording_breadcrumbs_patch()
 
         set_breakpoint(eg2)
@@ -88,7 +88,7 @@ module RunningStepNextWhenThereIsNoNextDoesNotCauseNextDebugRunToStep
     include("setup_ui_test_module.jl")
 
     @testset "$(@__MODULE__)" begin
-        p_readline = make_readline_patch(["StepNext", "Continue"])
+        p_readline = make_readline_patch(["SN", "CC"])
         p_breadcrumbs, record = make_recording_breadcrumbs_patch()
 
         set_breakpoint(eg_last)
@@ -109,7 +109,7 @@ module CanInfluenceCallingEnviroment
     @testset "$(@__MODULE__)" begin
         global zzz = 10
 
-        patch = make_readline_patch(["zzz = 20", "Continue"])
+        patch = make_readline_patch(["zzz = 20", "CC"])
 
         set_breakpoint(eg2)
         apply(patch) do
@@ -123,7 +123,7 @@ module Abort
     include("setup_ui_test_module.jl")
     
     @testset "$(@__MODULE__)" begin
-        patch = make_readline_patch(["Abort"])
+        patch = make_readline_patch(["XX"])
 
         set_breakpoint(eg2)
         apply(patch) do

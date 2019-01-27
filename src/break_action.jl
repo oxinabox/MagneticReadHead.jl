@@ -1,9 +1,17 @@
-const actions = (
-    :Continue,
-    :StepIn,
-    :StepNext,
-    :Abort)
+noact(ctx) = nothing
 
+const actions = OrderedDict([
+   :CC => (desc="Continue",  before_break=noact,                 after_break=noact),
+   :SI => (desc="Step In",   before_break=engage_stepping_mode!, after_break=noact),
+   :SN => (desc="Step Next", before_break=noact,                 after_break=engage_stepping_mode!),
+   :XX => (desc="Abort",     before_break=ctx->throw(UserAbortedException()), after_break=noact),
+])
+
+function print_commands()
+   printstyled("Commands: "; color=:green)
+   format_command((txt, cmd)) = "$txt ($(cmd.desc))"
+   println(join(format_command.(collect(actions)), ", "))
+end
 ################################
 
 function breadcrumbs(f, args)
@@ -20,13 +28,12 @@ function iron_repl(f, args, eval_module)
     
     printstyled("Args: "; color=:light_yellow)
     println(join(keys(name2arg), ", "))
-    printstyled("Commands: "; color=:green)
-    println(join(actions, ", "))
-    
+    print_commands()
+
     local code_ast
     while true
         code_ast = get_user_input()
-        if code_ast ∈ actions
+        if haskey(actions, code_ast)
             return code_ast # Send the codeword back
         end
         code_ast = subnames(name2arg, code_ast)
@@ -47,17 +54,11 @@ function break_action(ctx, f, args...)
     eval_module = ctx.metadata.eval_module
 
     start_code_word = iron_repl(f, args, eval_module)
-    if start_code_word == :StepIn
-        engage_stepping_mode!(ctx)
-    elseif start_code_word == :Abort
-        throw(UserAbortedException())
-    end
-    
+    actions[start_code_word].before_break(ctx)
+
     ans = Base.invokelatest(Cassette.recurse, ctx, f, args...)
     
-    if start_code_word == :StepNext
-        engage_stepping_mode!(ctx)
-    end
+    actions[start_code_word].after_break(ctx)
 
     return ans
 end
