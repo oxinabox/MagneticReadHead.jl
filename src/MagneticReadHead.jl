@@ -5,6 +5,8 @@ using Cassette
 using MacroTools
 using Mocking
 using OrderedCollections
+
+using Revise
 using Revise: get_method, sigex2sigts, get_signature
 
 
@@ -15,7 +17,7 @@ include("utils.jl")
 include("inner_repl.jl")
 include("breakpoints.jl")
 include("break_action.jl")
-
+include("locate.jl")
 
 struct UserAbortedException <: Exception end
 
