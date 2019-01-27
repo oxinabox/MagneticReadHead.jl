@@ -7,7 +7,8 @@
 
 Gets all the data Revise has on the given module.
 """
-pkgdata(mod::Module) = Revise.pkgdatas[Base.PkgId(mod)]
+pkgdata(pkg_id::Base.PkgId) = Revise.pkgdatas[pkg_id]
+pkgdata(mod::Module) = pkgdata(Base.PkgId(mod))
 # TODO check how this works for submodules, might need to root module it first.
 
 """
@@ -16,10 +17,11 @@ pkgdata(mod::Module) = Revise.pkgdatas[Base.PkgId(mod)]
 Retrieve all the data Revise has on the contents of given file
 from the given module.
 """
-function filemap(mod::Module, file)
+function filemap(mod, file)
     mdata = pkgdata(mod)
     mfiles = joinpath.(mdata.path, keys(mdata.fileinfos))
     
+    file = expanduser(file)
     if !isabspath(file)
         # We do not need it to be absolute
         # But we do want it to start with a "/"
@@ -28,7 +30,7 @@ function filemap(mod::Module, file)
         file = "/" * file
     end
     matched_ind = findfirst(mfile->endswith(mfile, file) , mfiles)
-    matched_ind ===  nothing &&  error("Could not locate $file in $mod")
+    matched_ind ===  nothing && return nothing
      
     internal_file = collect(keys(mdata.fileinfos))[matched_ind]
     Revise.maybe_parse_from_cache!(mdata, internal_file)  # Ensure fileinfo filled
@@ -46,17 +48,52 @@ end
 # This is not a function so just return an empty range
 linerange((def, none)::Tuple{Any, Nothing}) = 1:0
 
+"""
+    containing_method([module], filename, linenum)
 
-function containing_method(mod::Module, file, linenum)
+Returns the method within which that line number, in that file, occurs.
+Returns `nothing` on no match.
+
+If the module is not provided, then all modules loaded
+will be searched for a file with that name that has a function over that line.
+
+Filenames can be absolute, or partial.
+E.g. `/home/user1/dev/MyMod/src/helpers/utils.jl`,
+`helpers/utils.jl` or `utils.jl` are all acceptable.
+
+However, if multiple files match the module (or lack of module),
+and filename specification then only one will be  selected.
+"""
+function containing_method(mod, file, linenum)
     module_fmaps = filemap(mod, file)
+    module_fmaps === nothing && return nothing
     for (inner_mod, fmaps) in module_fmaps
         for entry in fmaps.defmap
             def, info = entry
             lr = linerange((def, info))
             if linenum ∈ lr
                 sigt, offset = info
-                return sigt2methsig(sigt)
+                return sigt2meth(sigt[end])
             end
         end
     end
+end
+
+function containing_method(file, linenum)
+    for pkg_id in keys(Revise.pkgdatas)
+        meth = containing_method(pkg_id, file, linenum)
+        meth !== nothing && return meth
+    end
+end
+
+function sigt2meth(::Type{SIGT}) where SIGT
+    # TODO Revise.sig2t2methsig, should work, but sometimes seems not to
+    # so using this
+    params = SIGT.parameters
+    func_t = params[1]
+    func = func_t.instance
+
+    args_t = Tuple{params[2:end]...}
+
+    return only(methods(func, args_t))
 end

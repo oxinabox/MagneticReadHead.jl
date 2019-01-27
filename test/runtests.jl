@@ -115,6 +115,7 @@ module CanInfluenceCallingEnviroment
         apply(patch) do
             @iron_debug eg1()
         end
+        @test zzz==20
     end
 end
 
