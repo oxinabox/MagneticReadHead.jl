@@ -5,7 +5,6 @@ version = "0.1.0"
 
 [deps]
 Cassette = "7057c7e9-c182-5462-911a-8362d720325c"
-ColorTypes = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 Mocking = "78c3b35d-d492-501b-9361-3d52fe80e533"
@@ -14,6 +13,3 @@ Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-
-[targets]
-test = ["Test"]
