@@ -101,7 +101,12 @@ end
 
 
 ##############
+"""
+    src_line2ir_statement_ind(irr, src_line)
 
+Given a CodeIR, and line number from source code
+determines the index of the last IR statement that occurs on that line.
+"""
 function src_line2ir_statement_ind(ir, src_line)
     linetable_ind = findlast(ir.linetable) do lineinfo
         lineinfo.line == src_line
