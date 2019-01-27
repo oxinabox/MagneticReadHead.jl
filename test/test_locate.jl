@@ -2,9 +2,25 @@ using Revise
 using MagneticReadHead
 using Test
 
-using MagneticReadHead: filemap, pkgdata, containing_method
+using MagneticReadHead:
+    filemap, pkgdata, containing_method, src_line2ir_statement_ind
 
 @show Revise.pkgdatas #BLACKMAGIC: Remove this line and the tests fail
+
+@testset "src_line2ir_statement_ind" begin
+    ir1line = first(methods(()->1)) |> Base.uncompressed_ast
+    @test src_line2ir_statement_ind(ir1line, (@__LINE__)-1) == 1
+    @test src_line2ir_statement_ind(ir1line, 1000) == nothing
+
+    ir1line2 = first(methods(()->(x=1;x*x))) |> Base.uncompressed_ast
+    @test src_line2ir_statement_ind(ir1line2, (@__LINE__)-1) == 3
+    
+
+    ir2line = first(methods(()->(x=1;
+                                  x*x))) |> Base.uncompressed_ast
+    @test src_line2ir_statement_ind(ir2line, (@__LINE__)-1) == 3
+end
+
 
 @testset "pkgdata" begin
     @test pkgdata(MagneticReadHead) !==nothing
@@ -35,7 +51,5 @@ end
             )
         end
     end
-
-
-
 end
+

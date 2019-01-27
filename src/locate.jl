@@ -97,3 +97,15 @@ function sigt2meth(::Type{SIGT}) where SIGT
 
     return only(methods(func, args_t))
 end
+
+
+
+##############
+
+function src_line2ir_statement_ind(ir, src_line)
+    linetable_ind = findlast(ir.linetable) do lineinfo
+        lineinfo.line == src_line
+    end
+    statement_ind = findlast(isequal(linetable_ind), ir.codelocs)
+    return statement_ind
+end
