@@ -21,6 +21,37 @@ function breadcrumbs(f, args)
    println()
 end
 
+
+function breadcrumbs(file::AbstractString, line_num; nbefore=2, nafter=2)
+   return breadcrumbs(stdout, file, line_num; nbefore=nbefore, nafter=nafter)
+end
+
+function breadcrumbs(io, file::AbstractString, line_num; nbefore=2, nafter=2)
+   @assert(nbefore >= 0)
+   @assert(nafter >= 0)
+   
+   all_lines = readlines(file)
+   first_line_num = max(1, line_num - nbefore)
+   last_line_num = min(length(all_lines), line_num + nafter)
+   
+   for ln in first_line_num:last_line_num
+      line = all_lines[ln]
+      if ln == line_num
+         line = "➧" * line
+         color = :cyan
+      else
+         line = " " * line
+         color = :light_green
+         if ln ∈ (first_line_num, last_line_num)
+            color = :light_black
+         end
+      end
+      printstyled(io, line, "\n"; color=color)
+   end
+end
+
+
+###########
 function iron_repl(f, args, eval_module)
     @mock breadcrumbs(f, args)
     
