@@ -6,6 +6,7 @@ test_files = [
     "test_utils.jl",
     "test_breakpoints.jl",
     "test_behavour.jl",
+    "test_detailed.jl",
 ]
 
 @testset "MagneticReadHead" begin
