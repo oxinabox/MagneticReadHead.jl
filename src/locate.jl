@@ -1,7 +1,3 @@
-
-
-
-
 """
     pkgdata(mod)
 
@@ -9,7 +5,6 @@ Gets all the data Revise has on the given module.
 """
 pkgdata(pkg_id::Base.PkgId) = Revise.pkgdatas[pkg_id]
 pkgdata(mod::Module) = pkgdata(Base.PkgId(mod))
-# TODO check how this works for submodules, might need to root module it first.
 
 """
     filemap(mod, file)
@@ -37,7 +32,6 @@ function filemap(mod, file)
     finfo = collect(values(mdata.fileinfos))[matched_ind]
     return finfo.fm
 end
-
 
 
 function linerange((def, (sig, offset))::Tuple{Any, Tuple{Any, Int}})
@@ -87,8 +81,6 @@ function containing_method(file, linenum)
 end
 
 function sigt2meth(::Type{SIGT}) where SIGT
-    # TODO Revise.sig2t2methsig, should work, but sometimes seems not to
-    # so using this
     params = SIGT.parameters
     func_t = params[1]
     func = func_t.instance
