@@ -5,21 +5,25 @@ using Test
 
 @testset "Basic local variablable capture" begin
     function foo(x)
-        y = x+1
-        z = x+2
+        y = x+10
+        z = x+20
         return (x,y,z)
     end
     
     ctx = HandEvalCtx(metadata=Dict(), pass=handeval_pass)
-    @test (1,2,3) == Cassette.recurse(ctx, ()->foo(1))
+    #@test (10,20,30) == Cassette.recurse(ctx, ()->foo(1))
+    ret = Cassette.recurse(ctx, foo, 10)
     
     @show ctx.metadata
+    @show ret
+    #==
     @testset "Assignments" begin
-        @test ctx.metadata[:y] == 2
-        @test ctx.metadata[:z] == 3
+        @test ctx.metadata[:y] == 20
+        @test ctx.metadata[:z] == 30
     end
 
     @testset "arguments" begin
-        @test_broken ctx.metadata[:x] == 1
+        @test_broken ctx.metadata[:x] == 10
     end
+    ==#
 end
