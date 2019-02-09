@@ -4,6 +4,7 @@ using Test
 test_files = [
     "test_inner_repl.jl",
     "test_utils.jl",
+    "test_breakpoints.jl",
 ]
 
 @testset "MagneticReadHead" begin
