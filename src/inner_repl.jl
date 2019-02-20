@@ -8,7 +8,7 @@ For a function `f` with the arguments `args`
 returns a dict mapping the names of the arguments to their values.
 """
 function argnames(f, args)
-    meth = methodof(f, args) 
+    meth = methodof(f, args)
     names = Base.method_argnames(meth)[2:end] # first is self
     
     if length(names) < length(args)
@@ -32,7 +32,7 @@ subnames(name2arg, name::Symbol) = get(name2arg, name, name)
 function subnames(name2arg, code::Expr)
     MacroTools.postwalk(code) do name
         # TODO Make this handle the name being on the LHS of assigment right
-        get(name2arg, name, name)  # If we have a value for it swap it in. 
+        get(name2arg, name, name)  # If we have a value for it swap it in.
     end
 end
 

@@ -1,23 +1,16 @@
 Cassette.@context HandEvalCtx
 
 
-#==
 function Cassette.overdub(ctx::HandEvalCtx, f, args...)
     if Cassette.canrecurse(ctx, f, args...)
         _ctx = Cassette.similarcontext(ctx, metadata = Dict())
         
-        try
-            return Cassette.recurse(_ctx, f, args...)
-        finally
-            #save assignments from functions
-            ctx.metadata[gensym(nameof(f))] = _ctx.metadata
-        end
+        return Cassette.recurse(_ctx, f, args...)
     else
         return Cassette.fallback(ctx, f, args...)
     end
 end
 
-==#
 
 
 slotname(ir::Core.CodeInfo, slotnum::Integer) = ir.slotnames[slotnum]
