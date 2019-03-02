@@ -21,7 +21,6 @@ function breadcrumbs(f, args)
    println()
 end
 
-
 function breadcrumbs(file::AbstractString, line_num; nbefore=2, nafter=2)
    return breadcrumbs(stdout, file, line_num; nbefore=nbefore, nafter=nafter)
 end
@@ -51,9 +50,13 @@ function breadcrumbs(io, file::AbstractString, line_num; nbefore=2, nafter=2)
 end
 
 
+# this function exists only for mocking so we can test it.
+breakpoint_hit(f, args) = nothing
+
 ###########
 function iron_repl(f, args, eval_module)
-    @mock breadcrumbs(f, args)
+    @mock breakpoint_hit(f, args)
+    breadcrumbs(f, args)
     
     name2arg = argnames(f, args)
     

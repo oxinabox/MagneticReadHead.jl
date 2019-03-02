@@ -23,7 +23,7 @@ module CanHaveNoBreakpoints
 
     @testset "$(@__MODULE__)" begin
         p_readline = make_readline_patch([])
-        p_breadcrumbs, record = make_recording_breadcrumbs_patch()
+        p_breadcrumbs, record = make_recording_breakpoint_hit_patch()
 
         apply([p_readline, p_breadcrumbs]) do
             @iron_debug eg1()
@@ -39,7 +39,7 @@ module CanHave1Breakpoint
 
     @testset "$(@__MODULE__)" begin
         p_readline = make_readline_patch(["CC"])
-        p_breadcrumbs, record = make_recording_breadcrumbs_patch()
+        p_breadcrumbs, record = make_recording_breakpoint_hit_patch()
 
         set_breakpoint(eg2)
         apply([p_readline, p_breadcrumbs]) do
@@ -54,7 +54,7 @@ module CanHave2Breakpoints
 
     @testset "$(@__MODULE__)" begin
         p_readline = make_readline_patch(["CC", "CC"])
-        p_breadcrumbs, record = make_recording_breadcrumbs_patch()
+        p_breadcrumbs, record = make_recording_breakpoint_hit_patch()
 
         set_breakpoint(eg2)
         set_breakpoint(eg3)
@@ -73,7 +73,7 @@ module CanHave1BreakpointThenStepInThenContinue
 
     @testset "$(@__MODULE__)" begin
         p_readline = make_readline_patch(["SI", "CC"])
-        p_breadcrumbs, record = make_recording_breadcrumbs_patch()
+        p_breadcrumbs, record = make_recording_breakpoint_hit_patch()
 
         set_breakpoint(eg2)
         apply([p_readline, p_breadcrumbs]) do
@@ -89,7 +89,7 @@ module RunningStepNextWhenThereIsNoNextDoesNotCauseNextDebugRunToStep
 
     @testset "$(@__MODULE__)" begin
         p_readline = make_readline_patch(["SN", "CC"])
-        p_breadcrumbs, record = make_recording_breadcrumbs_patch()
+        p_breadcrumbs, record = make_recording_breakpoint_hit_patch()
 
         set_breakpoint(eg_last)
         apply([p_readline, p_breadcrumbs]) do

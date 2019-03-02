@@ -20,9 +20,9 @@ function make_readline_patch(text_queue)
     end
 end
 
-function make_recording_breadcrumbs_patch()
+function make_recording_breakpoint_hit_patch()
     record = []
-    patch = @patch function breadcrumbs(f, args)
+    patch = @patch function breakpoint_hit(f, args)
         println("\n", f, typeof.(args)) #simple breadcrumbs for handchecking
         push!(record, (f=f, args=args))
     end
