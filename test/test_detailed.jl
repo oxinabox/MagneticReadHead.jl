@@ -42,3 +42,34 @@ end
     
     @test length(vars) == 2  # make sure nothing else recorded.
 end
+
+####################################################################
+
+module lockout
+    function foo(x)
+        y = x+12
+        z = x+22
+        return (x,y,z)
+    end
+end
+
+@testset "Basic local variable capture from another module" begin
+   
+    ctx = HandEvalCtx()
+    @test (50,62,72) == Cassette.recurse(ctx, lockout.foo, 50)
+    vars = ctx.metadata.variables
+    @testset "Assignments" begin
+        @test vars[:y] == 62
+        @test vars[:z] == 72
+    end
+
+    @testset "arguments" begin
+        @test vars[:x] == 50
+    end
+    
+    @test length(vars) == 3  # make sure nothing else recorded.
+end
+
+
+
+

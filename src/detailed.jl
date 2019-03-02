@@ -1,6 +1,11 @@
 Cassette.@context HandEvalCtx
+
+function handeval_break_action(ctx, meth, stmt_number)
+    println(meth, " ",  stmt_number)
+end
+
 struct HandEvalMeta
-    variables::Dict{Symbol,Any}
+    variables::Dict{Symbol, Any}
 end
 
 function HandEvalMeta()
@@ -15,7 +20,6 @@ end
 function Cassette.overdub(ctx::HandEvalCtx, f, args...)
     if Cassette.canrecurse(ctx, f, args...)
         _ctx = HandEvalCtx()
-        
         return Cassette.recurse(_ctx, f, args...)
     else
         return Cassette.fallback(ctx, f, args...)
@@ -29,8 +33,6 @@ slotname(ir::Core.CodeInfo, slotnum) = slotname(ir, slotnum.id)
 # inserts insert `ctx.metadata[:x] = x`
 function record_slot_value(ir, variable_record_slot, slotnum)
     name = slotname(ir, slotnum)
- 
-    #call_ast(:(Base.setindex!(dest_slot, lhs, QuoteNode(name))))
     return Expr(
         :call,
         Expr(:nooverdub, GlobalRef(Base, :setindex!)),
@@ -122,17 +124,40 @@ function setup_metadata_slots!(ir, metadata_slot, variable_record_slot)
     )
 end
 
+"""
+    insert_break_actions!(ir, metadata_slot)
 
-function instrument_variables!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflection)
+Add calls to the break action between every statement.
+"""
+function insert_break_actions!(reflection, metadata_slot)
+    ir = reflection.code_info
+    break_state(i) = Expr(:call,
+        Expr(:nooverdub, GlobalRef(MagneticReadHead, :handeval_break_action)),
+        metadata_slot, reflection.method, i
+    )
+
+    # one after every statement
+    Cassette.insert_statements!(
+        ir.code, ir.codelocs,
+        (stmt, i) -> i==1 ? 4 : 3,
+        (stmt, i) ->
+            i == 1 ?
+                [break_state(0); stmt; break_state(i); Core.SSAValue(i+1)] :
+                [stmt; break_state(i); Core.SSAValue(i)]
+    )
+end
+
+function instrument_handeval!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflection)
     ir::Core.CodeInfo = reflection.code_info
     # Create slots to store metadata and it's variable record field
     # put them a the end.
     metadata_slot = create_slot!(ir, "metadata")
     variable_record_slot = create_slot!(ir, "variable_record")
 
+    insert_break_actions!(reflection, metadata_slot)
+
     # Now the real part where we determine about assigments
     instrument_assignments!(ir, variable_record_slot)
-       
     
     # record all the initial values so we get the parameters
     instrument_arguments!(ir, reflection.method, variable_record_slot)
@@ -146,6 +171,6 @@ function instrument_variables!(::Type{<:HandEvalCtx}, reflection::Cassette.Refle
 end
 
 
-const handeval_pass = Cassette.@pass instrument_variables!
+const handeval_pass = Cassette.@pass instrument_handeval!
 
 
