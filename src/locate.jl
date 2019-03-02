@@ -33,15 +33,49 @@ function filemap(mod, file)
     return finfo.fm
 end
 
+######################################################################
+# These come from Rebugger.jl
+# Including them here as Rebugger itself is causing problems.
+# They can away once code tracking gets a bit more stuff.
+# https://github.com/timholy/CodeTracking.jl/issues/3
 
-function linerange((def, (sig, offset))::Tuple{Any, Tuple{Any, Int}})
-    return Rebugger.linerange(def, offset)
+using Revise: ExLike
+
+
+"""
+    r = linerange(expr, offset=0)
+Compute the range of lines occupied by `expr`.
+Returns `nothing` if no line statements can be found.
+"""
+function linerange(def::ExLike, offset=0)
+    start, haslinestart = findline(def, identity)
+    stop, haslinestop  = findline(def, Iterators.reverse)
+    (haslinestart & haslinestop) && return (start+offset):(stop+offset)
+    return nothing
 end
 
+function findline(ex, order)
+    ex.head == :line && return ex.args[1], true
+    for a in order(ex.args)
+        a isa LineNumberNode && return a.line, true
+        if a isa ExLike
+            ln, hasline = findline(a, order)
+            hasline && return ln, true
+        end
+    end
+    return 0, false
+end
+
+
+function linerange((def, (sig, offset))::Tuple{Any, Tuple{Any, Int}})
+    return linerange(def, offset)
+end
 
 # This is not a function so just return an empty range
 linerange((def, none)::Tuple{Any, Nothing}) = 1:0
 
+
+########################################################################
 """
     containing_method([module], filename, linenum)
 
@@ -65,6 +99,9 @@ function containing_method(mod, file, linenum)
         for entry in fmaps.defmap
             def, info = entry
             lr = linerange((def, info))
+            # TODO: workout  a way to round-forward as the linerange starts from first
+            # statement within the functions body, not from the line it is "declared"
+            # And there could be quiet some whitespace
             if linenum ∈ lr
                 sigt, offset = info
                 return sigt2meth(sigt[end])

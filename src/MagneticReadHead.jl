@@ -8,7 +8,6 @@ using OrderedCollections
 
 using Revise
 using Revise: get_method, sigex2sigts, get_signature
-using Rebugger
 
 export set_breakpoint, rm_breakpoint, @iron_debug
 
