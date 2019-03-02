@@ -1,9 +1,20 @@
 Cassette.@context HandEvalCtx
+struct HandEvalMeta
+    variables::Dict{Symbol,Any}
+end
+
+function HandEvalMeta()
+    return HandEvalMeta(Dict{Symbol,Any}())
+end
+
+function HandEvalCtx()
+    return HandEvalCtx(;metadata=HandEvalMeta(), pass=handeval_pass)
+end
 
 
 function Cassette.overdub(ctx::HandEvalCtx, f, args...)
     if Cassette.canrecurse(ctx, f, args...)
-        _ctx = Cassette.similarcontext(ctx, metadata = Dict())
+        _ctx = HandEvalCtx()
         
         return Cassette.recurse(_ctx, f, args...)
     else
@@ -12,19 +23,18 @@ function Cassette.overdub(ctx::HandEvalCtx, f, args...)
 end
 
 
-
 slotname(ir::Core.CodeInfo, slotnum::Integer) = ir.slotnames[slotnum]
 slotname(ir::Core.CodeInfo, slotnum) = slotname(ir, slotnum.id)
 
 # inserts insert `ctx.metadata[:x] = x`
-function record_slot_value(ir, metadata_slot, slotnum)
+function record_slot_value(ir, variable_record_slot, slotnum)
     name = slotname(ir, slotnum)
  
     #call_ast(:(Base.setindex!(dest_slot, lhs, QuoteNode(name))))
     return Expr(
         :call,
         Expr(:nooverdub, GlobalRef(Base, :setindex!)),
-        metadata_slot,
+        variable_record_slot,
         slotnum,
         QuoteNode(name)
     )
@@ -32,18 +42,18 @@ end
 
 # What we want to do is:
 # After every assigment: `x = foo`, insert `ctx.metadata[:x] = x`
-function instrument_assignments!(ir, metadata_slot)
+function instrument_assignments!(ir, variable_record_slot)
     is_assignment(stmt) = Base.Meta.isexpr(stmt, :(=))
     stmtcount(stmt, i) = is_assignment(stmt) ? 2 : nothing
     function newstmts(stmt, i)
         lhs = stmt.args[1]
-        record = record_slot_value(ir, metadata_slot, lhs)
+        record = record_slot_value(ir, variable_record_slot, lhs)
         return [stmt, record]
     end
     Cassette.insert_statements!(ir.code, ir.codelocs, stmtcount, newstmts)
 end
 
-function instrument_arguments!(ir, method, metadata_slot)
+function instrument_arguments!(ir, method, variable_record_slot)
     # start from 2 to skip #self
     arg_names = Base.method_argnames(method)[2:end]
     arg_slots = 1 .+ (1:length(arg_names))
@@ -54,14 +64,12 @@ function instrument_arguments!(ir, method, metadata_slot)
 
     Cassette.insert_statements!(
         ir.code, ir.codelocs,
-        # Only add to line 1 as doing this at the begining
-        # add 1 because we need to put the original line 1 back in
         (stmt, i) -> i == 1 ? length(arg_slots) + 1 : nothing,
 
         (stmt, i) -> [
             map(arg_slots) do slotnum
                 slot = Core.SlotNumber(slotnum)
-                record_slot_value(ir, metadata_slot, slot)
+                record_slot_value(ir, variable_record_slot, slot)
             end;
             stmt
         ]
@@ -83,45 +91,56 @@ function create_slot!(ir, namebase="")
 end
 
 """
-    put_metadata_in_its_slot!(ir, metadata_slot)
+    setup_metadata_slots!(ir, metadata_slot, variable_record_slot)
 
-Attaches the cassette metadata object to the slot given.
+Attaches the cassette metadata object and it's variable field to the slot given.
 This will be added as the very first statement to the ir.
 """
-function put_metadata_in_its_slot!(ir, metadata_slot)
-    getmetadata = Expr(
-        :call,
-        Expr(
-            :nooverdub,
-            GlobalRef(Core, :getfield)
-        ),
-        Expr(:contextslot),
-        QuoteNode(:metadata)
-    )
+function setup_metadata_slots!(ir, metadata_slot, variable_record_slot)
+    statements = [
+        # Get Cassette to fill in the MetaData slot
+        Expr(:(=), metadata_slot, Expr(
+            :call,
+            Expr(:nooverdub, GlobalRef(Core, :getfield)),
+            Expr(:contextslot),
+            QuoteNode(:metadata)
+        )),
+
+        # Extract it's variables dict field
+        Expr(:(=), variable_record_slot, Expr(
+            :call,
+            Expr(:nooverdub, GlobalRef(Core, :getfield)),
+            metadata_slot,
+            QuoteNode(:variables)
+        ))
+    ]
 
     Cassette.insert_statements!(
         ir.code, ir.codelocs,
-        (stmt, i) -> i == 1 ? 2 : nothing,
-        (stmt, i) -> [Expr(:(=), metadata_slot, getmetadata), stmt]
+        (stmt, i) -> i == 1 ? length(statements) + 1 : nothing,
+        (stmt, i) -> [statements; stmt]
     )
 end
 
 
 function instrument_variables!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflection)
     ir::Core.CodeInfo = reflection.code_info
-    # Create a slot that we will put the metadata in, make it the last one
+    # Create slots to store metadata and it's variable record field
+    # put them a the end.
     metadata_slot = create_slot!(ir, "metadata")
+    variable_record_slot = create_slot!(ir, "variable_record")
 
     # Now the real part where we determine about assigments
-    instrument_assignments!(ir, metadata_slot)
+    instrument_assignments!(ir, variable_record_slot)
        
     
     # record all the initial values so we get the parameters
-    instrument_arguments!(ir, reflection.method, metadata_slot)
+    instrument_arguments!(ir, reflection.method, variable_record_slot)
 
-    # insert the initial `metadata slot` assignment into the IR.
+    # insert the initial metadata and variable record slot
+    # assignments into the IR.
     # Do this last so it doesn't get caught in our assignment catching
-    put_metadata_in_its_slot!(ir, metadata_slot)
+    setup_metadata_slots!(ir, metadata_slot, variable_record_slot)
    
     return ir
 end
