@@ -18,6 +18,7 @@ function breadcrumbs(f, args)
    meth = methods(f, typeof.(args)) |> only
    printstyled("\nBreakpoint Hit: "; color=:blue)
    printstyled(string(meth); color=:light_blue)
+   breadcrumbs(string(meth.file), meth.line)
    println()
 end
 
