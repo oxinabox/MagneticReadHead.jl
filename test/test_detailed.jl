@@ -70,6 +70,3 @@ end
     @test length(vars) == 3  # make sure nothing else recorded.
 end
 
-
-
-

@@ -140,10 +140,9 @@ function insert_break_actions!(reflection, metadata_slot)
     Cassette.insert_statements!(
         ir.code, ir.codelocs,
         (stmt, i) -> i==1 ? 4 : 3,
-        (stmt, i) ->
-            i == 1 ?
-                [break_state(0); stmt; break_state(i); Core.SSAValue(i+1)] :
-                [stmt; break_state(i); Core.SSAValue(i)]
+        (stmt, i) -> i == 1 ?
+            [break_state(0); stmt; break_state(i); Core.SSAValue(i+1)] :
+            [stmt; break_state(i); Core.SSAValue(i)]
     )
 end
 
