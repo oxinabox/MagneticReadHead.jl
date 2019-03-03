@@ -1,4 +1,3 @@
-
 Cassette.@context MagneticCtx
 
 #### Breakpoint declaration helpers
@@ -44,20 +43,20 @@ end
 #
 # Universal Breakpoint -- break on every call
 
-function engage_stepping_mode!(ctx)
-    ctx.metadata.stepping_mode=true
+function engage_stepping_mode!(metadata)
+    metadata.stepping_mode=true
     set_breakpoint_for_every_call()
 
-    ctx.metadata.do_at_next_break_start = function()
-        disengage_stepping_mode!(ctx)
-        ctx.metadata.do_at_next_break_start = () -> nothing # Remove myself
+    metadata.do_at_next_break_start = function()
+        disengage_stepping_mode!(metadata)
+        metadata.do_at_next_break_start = () -> nothing # Remove myself
         return nothing
     end
 end
 
-function disengage_stepping_mode!(ctx)
-    ctx.metadata.stepping_mode==false && return
-    ctx.metadata.stepping_mode=false
+function disengage_stepping_mode!(metadata)
+    metadata.stepping_mode==false && return
+    metadata.stepping_mode=false
     rm_breakpoint_for_every_call()
 end
 

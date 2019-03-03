@@ -7,15 +7,13 @@ using Mocking
 using OrderedCollections
 using Revise: get_method, sigex2sigts, get_signature
 
-
 export set_breakpoint, rm_breakpoint, @iron_debug
 
-
 include("utils.jl")
+include("detailed.jl")
 include("inner_repl.jl")
 include("breakpoints.jl")
 include("break_action.jl")
-include("detailed.jl")
 
 struct UserAbortedException <: Exception end
 
