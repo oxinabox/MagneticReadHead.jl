@@ -1,5 +1,3 @@
-noact(metadata) = nothing
-
 set_stepping_mode!(mode) = metadata->metadata.stepping_mode=mode()
 const actions = OrderedDict([
    :CC => (desc="Continue",  act=set_stepping_mode!(StepContinue)),
@@ -35,10 +33,18 @@ end
 ##############################
 
 
+"""
+    break_action(metadata, meth, statement_ind)
+
+This determines what we should do when we hit a potential point to break at.
+We check if we should actually break here,
+and if so open up a REPL.
+if not, then we continue.
+"""
 function break_action(metadata, meth, statement_ind)
-    # This is effectively Cassette.overdub
-    # It is called by all breakpoint overdubs
-    if !(metadata.stepping_mode isa StepNext)
+    if !(metadata.stepping_mode isa StepNext
+         || should_breakon(metadata.breakpoint_rules, meth, statement_ind)
+        )
         # Only break on StepNext
         return
     end
