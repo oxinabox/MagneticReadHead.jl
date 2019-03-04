@@ -10,7 +10,7 @@ using Test
         return (x,y,z)
     end
     
-    ctx = HandEvalCtx()
+    ctx = HandEvalCtx(@__MODULE__)
     @test (10,20,30) == Cassette.recurse(ctx, foo, 10)
     vars = ctx.metadata.variables
     @testset "Assignments" begin
@@ -32,7 +32,7 @@ end
         return (y,z)
     end
   
-    ctx = HandEvalCtx()
+    ctx = HandEvalCtx(@__MODULE__)
     @test (111,121) == Cassette.recurse(ctx, foo2)
     vars = ctx.metadata.variables
     @testset "Assignments" begin
@@ -55,7 +55,7 @@ end
 
 @testset "Basic local variable capture from another module" begin
    
-    ctx = HandEvalCtx()
+    ctx = HandEvalCtx(@__MODULE__)
     @test (50,62,72) == Cassette.recurse(ctx, lockout.foo, 50)
     vars = ctx.metadata.variables
     @testset "Assignments" begin
@@ -69,4 +69,3 @@ end
     
     @test length(vars) == 3  # make sure nothing else recorded.
 end
-

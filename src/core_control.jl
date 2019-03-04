@@ -6,6 +6,7 @@ struct StepNext <: SteppingMode end
 struct StepContinue <: SteppingMode end
 struct StepOut <: SteppingMode end
 
+
 # On the way in
 child_stepping_mode(ctx::HandEvalCtx) =  child_stepping_mode(ctx.metadata.stepping_mode)
 child_stepping_mode(::StepContinue) = StepContinue()
@@ -21,33 +22,53 @@ parent_stepping_mode(::StepIn) = StepNext()  # can't go in, out will have to do
 parent_stepping_mode(::StepOut) = StepNext()   # This is what they want
 
 
-
 mutable struct HandEvalMeta
-    variables::Dict{Symbol, Any}
+    variables::OrderedDict{Symbol, Any}
     eval_module::Module
     stepping_mode::SteppingMode
+    breakpoint_rules::BreakpointRules
 end
 
-function HandEvalMeta(stepping_mode)
-    return HandEvalMeta(Dict{Symbol,Any}(), Main, stepping_mode)
+# TODO: Workout how we are actually going to do this in a nonglobal way
+const GLOBAL_BREAKPOINT_RULES = BreakpointRules()
+
+function HandEvalMeta(eval_module, stepping_mode)
+    return HandEvalMeta(
+        OrderedDict{Symbol,Any}(),
+        eval_module,
+        stepping_mode,
+        GLOBAL_BREAKPOINT_RULES
+    )
 end
 
-function HandEvalCtx(stepping_mode=StepIn())
-    return HandEvalCtx(;metadata=HandEvalMeta(stepping_mode), pass=handeval_pass)
+function HandEvalCtx(eval_module, stepping_mode=StepContinue())
+    return HandEvalCtx(;metadata=HandEvalMeta(eval_module, stepping_mode), pass=handeval_pass)
+end
+
+function Cassette.overdub(::typeof(HandEvalCtx()), args...)
+    error("HandEvalCtx without any had an overdub called on it. This should never happen as HandEvalCtx should never be constructed without giving them their metadata.")
 end
 
 
 function Cassette.overdub(ctx::HandEvalCtx, f, args...)
-    if Cassette.canrecurse(ctx, f, args...)
-        @show ctx  |> typeof
-        _ctx = HandEvalCtx(child_stepping_mode(ctx))
+    # This is basically the epicenter of all the logic
+    # We control the flow of stepping modes
+    # and which methods are instrumented or not.
+
+    method = methodof(f, args...)
+    should_recurse =
+        ctx.metadata.stepping_mode isa StepIn ||
+        should_instrument(ctx.metadata.breakpoint_rules, method)
+
+    if should_recurse && Cassette.canrecurse(ctx, f, args...)
+        _ctx = HandEvalCtx(ctx.metadata.eval_module, child_stepping_mode(ctx))
         try
             return Cassette.recurse(_ctx, f, args...)
         finally
-            @show _ctx  |> typeof
             ctx.metadata.stepping_mode = parent_stepping_mode(_ctx)
         end
     else
+        should_recurse && @warn "Not able to enter into method." f method
         return Cassette.fallback(ctx, f, args...)
     end
 end
