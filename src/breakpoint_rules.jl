@@ -11,7 +11,7 @@ Rule(v) = Rule(v, 0)
 
 # instrumenting rules
 match(rule::Rule{Method}, method) = method == rule.v
-match(rule::Rule{Module}, method) = moduleoof(method) == rule.v
+match(rule::Rule{Module}, method) = moduleof(method) == rule.v
 function match(rule::Rule{F}, method) where F
     # This one is for functions
     return functiontypeof(method) <: F
@@ -49,7 +49,7 @@ The default is to instrument everything.
 function should_instrument(rules::BreakpointRules, method)
     # If we are going to break on it, then definately instrument it
     for rule in rules.breakon_rules
-        match(rule) && return true
+        match(rule, method) && return true
     end
     # otherwise:
     # if we have a rule saying not to instrument it then don't
