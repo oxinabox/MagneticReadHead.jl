@@ -5,7 +5,7 @@ for (name, list) in ((:breakpoint, :breakon_rules), (:nodebug, :no_instrument_ru
     @eval export $(set!)
     @eval $(set!)(args...) = $(set!)(GLOBAL_BREAKPOINT_RULES, args...)
     @eval function $(set!)(rules::BreakpointRules, args...)
-        push!(rules.$list, Rule(args...))
+        return push!(rules.$list, Rule(args...))
     end
 
 
@@ -18,6 +18,7 @@ for (name, list) in ((:breakpoint, :breakon_rules), (:nodebug, :no_instrument_ru
         if length(rules.$list) == old_num_rules
             @info("No matching $($name) was found, so none removed")
         end
+        return rules.$list
     end
     
     list_all = Symbol(:list_, name,:s)
