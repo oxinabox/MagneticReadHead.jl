@@ -22,9 +22,12 @@ end
 
 function make_recording_breadcrumbs_patch()
     record = []
-    patch = @patch function breadcrumbs(f, args)
-        println("\n", f, typeof.(args)) #simple breadcrumbs for handchecking
-        push!(record, (f=f, args=args))
+    patch = @patch function breadcrumbs(meth, statement_ind)
+        push!(record,
+            (f=MagneticReadHead.functiontypeof(meth).instance,
+             method=meth,
+             statement_ind=statement_ind)
+        )
     end
     return patch, record
 end
