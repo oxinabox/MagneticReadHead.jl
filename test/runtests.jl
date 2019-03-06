@@ -1,7 +1,6 @@
-
 #==
 Note to test implementers:
- - For reasons, all user interaction test must go in this file
+ - For _reasons_, all user interaction test must go in this file
  - They can't be `include`ed AFIACT, or the mocks miss some-how.
  - All other tests should go in `run_non_ui_tests.jl`
    which is included in bottom of this file.
@@ -41,7 +40,7 @@ module CanHave1Breakpoint
         p_readline = make_readline_patch(["CC"])
         p_breadcrumbs, record = make_recording_breadcrumbs_patch()
 
-        set_breakpoint(eg2)
+        set_breakpoint!(eg2)
         apply([p_readline, p_breadcrumbs]) do
             @iron_debug eg1()
         end
@@ -56,8 +55,8 @@ module CanHave2Breakpoints
         p_readline = make_readline_patch(["CC", "CC"])
         p_breadcrumbs, record = make_recording_breadcrumbs_patch()
 
-        set_breakpoint(eg2)
-        set_breakpoint(eg3)
+        set_breakpoint!(eg2)
+        set_breakpoint!(eg3)
         apply([p_readline, p_breadcrumbs]) do
             @iron_debug eg1()
         end
@@ -75,7 +74,7 @@ module CanHave1BreakpointThenStepInThenContinue
         p_readline = make_readline_patch(["SI", "CC"])
         p_breadcrumbs, record = make_recording_breadcrumbs_patch()
 
-        set_breakpoint(eg2)
+        set_breakpoint!(eg2)
         apply([p_readline, p_breadcrumbs]) do
             @iron_debug eg1()
         end
@@ -91,7 +90,7 @@ module RunningStepNextWhenThereIsNoNextDoesNotCauseNextDebugRunToStep
         p_readline = make_readline_patch(["SN", "CC"])
         p_breadcrumbs, record = make_recording_breadcrumbs_patch()
 
-        set_breakpoint(eg_last)
+        set_breakpoint!(eg_last)
         apply([p_readline, p_breadcrumbs]) do
             @iron_debug eg1()
             @iron_debug eg1()
@@ -111,7 +110,7 @@ module CanInfluenceCallingEnviroment
 
         patch = make_readline_patch(["zzz = 20", "CC"])
 
-        set_breakpoint(eg2)
+        set_breakpoint!(eg2)
         apply(patch) do
             @iron_debug eg1()
         end
@@ -125,7 +124,7 @@ module Abort
     @testset "$(@__MODULE__)" begin
         patch = make_readline_patch(["XX"])
 
-        set_breakpoint(eg2)
+        set_breakpoint!(eg2)
         apply(patch) do
             @test nothing==@iron_debug eg1()
         end
