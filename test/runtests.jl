@@ -83,24 +83,6 @@ module CanHave1BreakpointThenStepInThenContinue
 end
 
  
-module RunningStepNextWhenThereIsNoNextDoesNotCauseNextDebugRunToStep
-    include("setup_ui_test_module.jl")
-
-    @testset "$(@__MODULE__)" begin
-        p_readline = make_readline_patch(["SN", "CC"])
-        p_breadcrumbs, record = make_recording_breadcrumbs_patch()
-
-        set_breakpoint!(eg_last)
-        apply([p_readline, p_breadcrumbs]) do
-            @iron_debug eg1()
-            @iron_debug eg1()
-         end
-        @test first.(record) == [eg_last, eg_last]
-    end
-end
-
-     
-
 ###############################################
 module CanInfluenceCallingEnviroment
     include("setup_ui_test_module.jl")

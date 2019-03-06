@@ -45,7 +45,7 @@ function break_action(metadata, meth, statement_ind)
     if !(metadata.stepping_mode isa StepNext
          || should_breakon(metadata.breakpoint_rules, meth, statement_ind)
         )
-        # Only break on StepNext
+        # Only break on StepNext and actual breakpoints
         return
     end
 
