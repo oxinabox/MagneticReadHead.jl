@@ -6,7 +6,6 @@ test_files = [
     "test_utils.jl",
     "test_method_utils.jl",
     "test_breakpoint_rules.jl",
-    #"test_breakpoints.jl",
     "test_behavour.jl",
     "test_variable_capture.jl",
 ]
