@@ -12,6 +12,9 @@ end
     for meth in methods(sum)
         @test functiontypeof(meth) <: typeof(sum)
     end
+    for meth in methods(+)  # This includes some parametric types
+        @test functiontypeof(meth) <: typeof(+)
+    end
     for meth in methods(detect_ambiguities)
         @test functiontypeof(meth) <: typeof(detect_ambiguities)
     end

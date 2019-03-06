@@ -1,5 +1,7 @@
 moduleof(m::Method) = m.module
-functiontypeof(m::Method) = m.sig.parameters[1]
+functiontypeof(m::Method) = _functiontypeof(m.sig)
+_functiontypeof(sig::UnionAll) = _functiontypeof(sig.body)
+_functiontypeof(sig::DataType) = sig.parameters[1]
 
 # Last method will always be closest to the types we provided
 methodof(f, args...) = methods(f, Tuple{typeof.(args)...}).ms[end]
