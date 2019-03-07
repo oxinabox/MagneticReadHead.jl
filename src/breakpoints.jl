@@ -2,6 +2,9 @@
 Cassette.@context MagneticCtx
 
 #### Breakpoint declaration helpers
+# We are importing stuff here from Revise that should be done with CodeTracking
+# But it doesn't matter since this whole file is getting deleted soon
+
 
 """
     @uneval(expr)
@@ -10,9 +13,9 @@ Deletes a method that was declared via `@eval`
 """
 macro uneval(expr)
     quote
-        sig = get_signature($(Expr(:quote, expr)))
-        sigt = only(sigex2sigts(@__MODULE__, sig))
-        meth = get_method(sigt)
+        sig = Revise.get_signature($(Expr(:quote, expr)))
+        sigt = only(Revise.sigex2sigts(@__MODULE__, sig))
+        meth = Revise.get_method(sigt)
         if meth == nothing
             @info "Method not found, thus not removed."
         else
