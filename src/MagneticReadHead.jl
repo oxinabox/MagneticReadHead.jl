@@ -6,8 +6,9 @@ using MacroTools
 using Mocking
 using OrderedCollections
 
-using Revise
-using Revise: get_method, sigex2sigts, get_signature
+using CodeTracking
+# We don't use Revise, but if it isn't loaded CodeTracking has issues
+using Revise: Revise
 
 export set_breakpoint, rm_breakpoint, @iron_debug
 
