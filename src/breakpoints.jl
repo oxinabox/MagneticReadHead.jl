@@ -1,80 +1,33 @@
+#TODO: think hard about API, eg maybe `set!(Breakpoint(foo,1))` might be nicest
 
-Cassette.@context MagneticCtx
-
-#### Breakpoint declaration helpers
-# We are importing stuff here from Revise that should be done with CodeTracking
-# But it doesn't matter since this whole file is getting deleted soon
-
-
-"""
-    @uneval(expr)
-
-Deletes a method that was declared via `@eval`
-"""
-macro uneval(expr)
-    quote
-        sig = Revise.get_signature($(Expr(:quote, expr)))
-        sigt = only(Revise.sigex2sigts(@__MODULE__, sig))
-        meth = Revise.get_method(sigt)
-        if meth == nothing
-            @info "Method not found, thus not removed."
-        else
-            Base.delete_method(meth)
-        end
+for (name, list) in ((:breakpoint, :breakon_rules), (:nodebug, :no_instrument_rules))
+    set! = Symbol(:set_, name, :!)
+    @eval export $(set!)
+    @eval $(set!)(args...) = $(set!)(GLOBAL_BREAKPOINT_RULES, args...)
+    @eval function $(set!)(rules::BreakpointRules, args...)
+        return push!(rules.$list, Rule(args...))
     end
-end
 
-##### Breakpoint Definitions
 
-# Function breakpoint -- break on all methods of a function
-function set_breakpoint(f::F) where F
-    if length(methods(f)) == 0
-        @warn "A breakpoint has been set on a function that currently has no methods. It seems unlikely that this was intended" func=f
+    rm! = Symbol(:rm_, name, :!)
+    @eval export $(rm!)
+    @eval $(rm!)(args...) = $(rm!)(GLOBAL_BREAKPOINT_RULES, args...)
+    @eval function $(rm!)(rules::BreakpointRules, args...)
+        old_num_rules = length(rules.$list  )
+        filter!(isequal(Rule(args...)), rules.$list )
+        if length(rules.$list) == old_num_rules
+            @info("No matching $($name) was found, so none removed")
+        end
+        return rules.$list
     end
     
-    @eval function Cassette.overdub(ctx::MagneticCtx, fi::$(F), zargs...)
-        break_action(ctx, fi, zargs...)
-    end
-end
+    list_all = Symbol(:list_, name,:s)
+    @eval export $(list_all)
+    @eval $(list_all)()=$(list_all)(GLOBAL_BREAKPOINT_RULES)
+    @eval $(list_all)(rules::BreakpointRules) = display(rules.$list)
 
-function rm_breakpoint(f::F) where F
-    @uneval function Cassette.overdub(ctx::MagneticCtx, fi::$(F), zargs...)
-    end
-end
-
-##############################################################################################################
-# Stepping Mode
-#
-# Universal Breakpoint -- break on every call
-
-function engage_stepping_mode!(ctx)
-    ctx.metadata.stepping_mode=true
-    set_breakpoint_for_every_call()
-
-    ctx.metadata.do_at_next_break_start = function()
-        disengage_stepping_mode!(ctx)
-        ctx.metadata.do_at_next_break_start = () -> nothing # Remove myself
-        return nothing
-    end
-end
-
-function disengage_stepping_mode!(ctx)
-    ctx.metadata.stepping_mode==false && return
-    ctx.metadata.stepping_mode=false
-    rm_breakpoint_for_every_call()
-end
-
-function set_breakpoint_for_every_call()
-    @eval function Cassette.overdub(ctx::MagneticCtx, fi, zargs...)
-        if fi isa Core.Builtin || ctx.metadata.stepping_mode == false #HACK: double check incase cassette is 256ing
-            do_not_break_action(ctx, fi, zargs...) # Do not mess with Intrinsics
-        else
-            break_action(ctx, fi, zargs...)
-        end
-    end
-end
-
-function rm_breakpoint_for_every_call()
-    @uneval function Cassette.overdub(ctx::MagneticCtx, fi, zargs...)
-    end
+    clear_all = Symbol(:clear_,name, :s!)
+    @eval export $clear_all
+    @eval $(clear_all)()=$(clear_all)(GLOBAL_BREAKPOINT_RULES)
+    @eval $(clear_all)(rules::BreakpointRules) = empty!(rules.$list)
 end

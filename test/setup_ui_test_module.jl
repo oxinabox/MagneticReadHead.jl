@@ -22,12 +22,14 @@ end
 
 function make_recording_breakpoint_hit_patch()
     record = []
-    patch = @patch function breakpoint_hit(f, args)
-        println("\n", f, typeof.(args)) #simple breadcrumbs for handchecking
-        push!(record, (f=f, args=args))
+    patch = @patch function breakpoint_hit(meth, statement_ind)
+        push!(record,
+            (f=MagneticReadHead.functiontypeof(meth).instance,
+             method=meth,
+             statement_ind=statement_ind)
+        )
     end
     return patch, record
 end
 
 include("demo.jl")
-

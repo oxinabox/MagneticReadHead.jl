@@ -5,5 +5,4 @@
 *.jl.cov
 *.jl.*.cov
 *.jl.mem
-
-dev/
+/dev
