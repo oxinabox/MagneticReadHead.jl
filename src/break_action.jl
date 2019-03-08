@@ -52,10 +52,10 @@ end
 
 
 # this function exists only for mocking so we can test it.
-breakpoint_hit(f, args) = nothing
+breakpoint_hit(meth, statement_ind) = nothing
 
 function iron_repl(metadata::HandEvalMeta, meth, statement_ind)
-    @mock breakpoint_hit(f, args)
+    @mock breakpoint_hit(meth, statement_ind)
     breadcrumbs(meth, statement_ind)
     
     printstyled("Vars: "; color=:light_yellow)

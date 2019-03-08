@@ -8,7 +8,6 @@ CodeTracking = "da1fd8a2-8d9e-5ec2-8556-3022fb5608a2"
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 Mocking = "78c3b35d-d492-501b-9361-3d52fe80e533"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
-Rebugger = "ee283ea6-eecd-56e3-beb3-83eb4d3c31e9"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 
 [compat]
