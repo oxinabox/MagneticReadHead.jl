@@ -18,7 +18,8 @@ function breadcrumbs(meth, statement_ind)
    printstyled("\nBreakpoint Hit: "; color=:blue)
    printstyled(string(meth); color=:light_blue)
    #TODO: Translate the statement_ind into a line number
-   breadcrumbs(string(meth.file), meth.line)
+   line_num = statement_ind2src_linenum(meth, statement_ind)
+   breadcrumbs(string(meth.file), line_num)
    println()
 end
 
