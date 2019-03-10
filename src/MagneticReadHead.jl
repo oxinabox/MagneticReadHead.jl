@@ -31,7 +31,7 @@ macro iron_debug(body)
     quote
         ctx = HandEvalCtx($(__module__), StepContinue())
         try
-            Cassette.recurse(ctx, ()->$(esc(body)))
+            return Cassette.recurse(ctx, ()->$(esc(body)))
         catch err
             err isa UserAbortedException || rethrow()
             nothing

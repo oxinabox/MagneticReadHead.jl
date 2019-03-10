@@ -78,7 +78,7 @@ end
 
 ##############
 """
-    src_line2ir_statement_ind(ir, src_line)
+    src_line2ir_statement_ind(method|ir, src_line)
 
 Given a CodeIR, and line number from source code
 determines the index of the last IR statement that occurs on that line.
@@ -89,6 +89,11 @@ function src_line2ir_statement_ind(ir, src_line)
     end
     statement_ind = findlast(isequal(linetable_ind), ir.codelocs)
     return statement_ind
+end
+
+function src_line2ir_statement_ind(meth::Method, src_line)
+    ir = Base.uncompressed_ast(meth)
+    return src_line2ir_statement_ind(ir, src_line)
 end
 
 """

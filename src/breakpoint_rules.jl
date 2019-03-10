@@ -4,11 +4,10 @@ struct Rule{V}
     v::V
     statement_ind::Int
 end
-
 # No matter if a Function or a Method, default to break at start
 Rule(v) = Rule(v, 0)
-# TODO: add stuff for file and line number. (Requires locating lines PR to be in)
 
+##############################################################################
 # instrumenting rules
 match(rule::Rule{Method}, method) = method == rule.v
 match(rule::Rule{Module}, method) = moduleof(method) == rule.v
