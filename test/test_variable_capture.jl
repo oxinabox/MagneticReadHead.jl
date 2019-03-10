@@ -19,13 +19,11 @@ end
     ctx = HandEvalCtx(@__MODULE__)
     res = Cassette.recurse(ctx, boopa!,[1,2],3)
     @test res == [3,2]
-#=
     @testset "function calling a basic mutating function" begin
         ctx = HandEvalCtx(@__MODULE__)
         res = Cassette.recurse(ctx, ()->boopa!([1,2],3))
         @test res == [3,2]
     end
-=#
 end
 
 testset "Normal things should not error" begin
@@ -42,8 +40,9 @@ testset "Normal things should not error" begin
         @test expected = indirect_recurse
     end
 end
-exit()
+
 ##########################
+
 
 @testset "Basic local variable capture" begin
     function foo(x)
