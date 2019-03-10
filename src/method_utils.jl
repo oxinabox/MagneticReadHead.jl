@@ -4,7 +4,15 @@ _functiontypeof(sig::UnionAll) = _functiontypeof(sig.body)
 _functiontypeof(sig::DataType) = sig.parameters[1]
 
 # Last method will always be closest to the types we provided
-methodof(f, args...) = methods(f, Tuple{typeof.(args)...}).ms[end]
+function methodof(f, args...)
+    try
+        methods(f, Tuple{typeof.(args)...}).ms[end]
+    catch
+        @warn "Determining methods failed" f arg_types=typeof.(args)
+        rethrow()
+    end
+end
+
 methodof(::Core.Builtin, args...) = nothing  # No methods for `Builtin`s
 
 #TODO: Methods are actually pretty slow to construct. 1-2μs and 8-15 allocations

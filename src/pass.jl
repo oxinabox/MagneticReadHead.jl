@@ -1,4 +1,3 @@
-
 # For ease of editting we have this here
 # It should be set to just redistpatch
 function handeval_break_action(metadata, meth, stmt_number)
@@ -120,7 +119,7 @@ function insert_break_actions!(reflection, metadata_slot)
         ir.code, ir.codelocs,
         (stmt, i) -> i==1 ? 4 : 3,
         (stmt, i) -> i == 1 ?
-            [break_state(0); stmt; break_state(i); Core.SSAValue(i+1)] :
+            [break_state(0); stmt; break_state(i); Core.SSAValue(2)] :
             [stmt; break_state(i); Core.SSAValue(i)]
     )
 end
@@ -135,10 +134,10 @@ function instrument_handeval!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflec
     insert_break_actions!(reflection, metadata_slot)
 
     # Now the real part where we determine about assigments
-    instrument_assignments!(ir, variable_record_slot)
+    #instrument_assignments!(ir, variable_record_slot)
     
     # record all the initial values so we get the parameters
-    instrument_arguments!(ir, reflection.method, variable_record_slot)
+    #instrument_arguments!(ir, reflection.method, variable_record_slot)
 
     # insert the initial metadata and variable record slot
     # assignments into the IR.
@@ -146,6 +145,11 @@ function instrument_handeval!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflec
     setup_metadata_slots!(ir, metadata_slot, variable_record_slot)
    
     return ir
+    #==quote
+        for line in $(ir.code)
+            @show line
+        end
+    end==#
 end
 
 

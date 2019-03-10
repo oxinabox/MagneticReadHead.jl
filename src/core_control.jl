@@ -54,7 +54,7 @@ function Cassette.overdub(ctx::HandEvalCtx, f, args...)
     # This is basically the epicenter of all the logic
     # We control the flow of stepping modes
     # and which methods are instrumented or not.
-
+    @debug "overdubbing" f args
     method = methodof(f, args...)
     should_recurse =
         ctx.metadata.stepping_mode isa StepIn ||
