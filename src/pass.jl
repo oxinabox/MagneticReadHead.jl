@@ -111,9 +111,11 @@ function insert_break_actions!(reflection, metadata_slot)
     ir = reflection.code_info
     break_state(i) = Expr(:call,
         Expr(:nooverdub, GlobalRef(MagneticReadHead, :handeval_break_action)),
-        metadata_slot, reflection.method, i
+        metadata_slot,
+        reflection.method,
+        i
     )
-
+    
     # one after every statement
     Cassette.insert_statements!(
         ir.code, ir.codelocs,
@@ -134,10 +136,10 @@ function instrument_handeval!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflec
     insert_break_actions!(reflection, metadata_slot)
 
     # Now the real part where we determine about assigments
-    #instrument_assignments!(ir, variable_record_slot)
+    instrument_assignments!(ir, variable_record_slot)
     
     # record all the initial values so we get the parameters
-    #instrument_arguments!(ir, reflection.method, variable_record_slot)
+    instrument_arguments!(ir, reflection.method, variable_record_slot)
 
     # insert the initial metadata and variable record slot
     # assignments into the IR.
@@ -145,11 +147,12 @@ function instrument_handeval!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflec
     setup_metadata_slots!(ir, metadata_slot, variable_record_slot)
    
     return ir
+    # For debugging, comment out the return and use
     #==quote
-        for line in $(ir.code)
-            @show line
+        for (ii,line) in enumerate($(ir.code))
+            println(ii,": ", line)
         end
-    end==#
+    end ==#
 end
 
 
