@@ -116,7 +116,6 @@ function insert_break_actions!(reflection, metadata_slot)
         i
     )
     
-    # one after every statement
     Cassette.insert_statements!(
         ir.code, ir.codelocs,
         (stmt, i) -> i==1 ? 4 : 3,
@@ -145,14 +144,21 @@ function instrument_handeval!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflec
     # assignments into the IR.
     # Do this last so it doesn't get caught in our assignment catching
     setup_metadata_slots!(ir, metadata_slot, variable_record_slot)
-   
+  
+    ir.ssavaluetypes = length(ir.code)
     return ir
+    #== 
     # For debugging, comment out the return and use
-    #==quote
+    quote
+        foreach(println, $(Core.Compiler.validate_code(ir)))
+        println()
+        dump($ir; maxdepth=1)
+        println()
         for (ii,line) in enumerate($(ir.code))
             println(ii,": ", line)
         end
-    end ==#
+    end
+    ==#
 end
 
 
