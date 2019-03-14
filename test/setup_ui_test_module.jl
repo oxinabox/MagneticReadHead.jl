@@ -32,4 +32,4 @@ function make_recording_breakpoint_hit_patch()
     return patch, record
 end
 
-include("demo.jl")
+include(joinpath(@__DIR__, "demo.jl"))
