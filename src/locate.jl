@@ -8,6 +8,10 @@ if no matching path is found then an empty list is returned
 """
 function source_paths(mod, file)
     mdata = pkgfiles(mod)
+    if mdata === nothing
+        @error("$mod is not a loaded module.")
+        return String[]
+    end
     mfiles = joinpath.(mdata.basedir, mdata.files)
     
     file = expanduser(file)

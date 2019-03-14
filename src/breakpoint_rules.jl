@@ -1,5 +1,3 @@
-Cassette.@context MagneticCtx
-
 struct Rule{V}
     v::V
     statement_ind::Int
