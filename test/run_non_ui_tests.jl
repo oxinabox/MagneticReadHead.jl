@@ -9,6 +9,7 @@ test_files = [
     "test_locate.jl",
     "test_method_utils.jl",
     "test_utils.jl",
+    "test_pass.jl",
     "test_variable_capture.jl",
 ]
 

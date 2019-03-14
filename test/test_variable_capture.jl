@@ -3,50 +3,6 @@ using MagneticReadHead: HandEvalCtx, handeval_pass
 using Cassette
 using Test
 
-#########################################################
-## Make sure pass doesn't break things tests
-
-@testset "function containing a vector literal" begin
-    ctx = HandEvalCtx(@__MODULE__)
-    res = Cassette.recurse(ctx, ()->(b=[30,20]; return b))
-    @test res == [30, 20]
-end
-
-
-@testset "basic mutating function" begin
-    function boopa!(x,y)
-        x[1]=y
-        return x
-    end
-    ctx = HandEvalCtx(@__MODULE__)
-    res = Cassette.recurse(ctx, boopa!, [1,2], 3)
-    @test res == [3,2]
-    @testset "function calling a basic mutating function" begin
-        ctx = HandEvalCtx(@__MODULE__)
-        res = Cassette.recurse(ctx, ()->boopa!([1,2],3))
-        @test res == [3,2]
-    end
-end
-
-@testset "Normal things should not error" begin
-    normal_codes = (
-        (fn = sum, args=([1,2,3,4],)),
-        (fn = identity, args=(302,)),
-        (fn = fill!, args=([1.0, 2.0], 0.0)),
-    )
-    for code in normal_codes
-        ctx = HandEvalCtx(@__MODULE__)
-        expected = code.fn(code.args...)
-        direct_recurse = Cassette.recurse(ctx, code.fn, code.args...)
-        @test expected == direct_recurse
-        indirect_recurse = Cassette.recurse(ctx, () -> code.fn(code.args...))
-        @test expected == indirect_recurse
-    end
-end
-
-###################################################################################
-# Actual Capture tests
-
 @testset "Basic local variable capture" begin
     function foo(x)
         y = x+10
@@ -65,7 +21,7 @@ end
     @testset "arguments" begin
         @test vars[:x] == 10
     end
-    
+     
     @test length(vars) == 3  # make sure nothing else recorded.
 end
 

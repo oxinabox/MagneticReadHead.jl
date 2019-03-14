@@ -118,15 +118,13 @@ function insert_break_actions!(reflection, metadata_slot)
     
     Cassette.insert_statements!(
         ir.code, ir.codelocs,
-        (stmt, i) -> i==1 ? 4 : 3,
-        (stmt, i) -> i == 1 ?
-            [break_state(0); stmt; break_state(i); Core.SSAValue(2)] :
-            [stmt; break_state(i); Core.SSAValue(i)]
+        (stmt, i) -> 2,
+        (stmt, i) -> [break_state(i-1); stmt]
     )
 end
 
 function instrument_handeval!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflection)
-    ir::Core.CodeInfo = reflection.code_info
+    ir = reflection.code_info
     # Create slots to store metadata and it's variable record field
     # put them a the end.
     metadata_slot = create_slot!(ir, "metadata")
@@ -144,21 +142,8 @@ function instrument_handeval!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflec
     # assignments into the IR.
     # Do this last so it doesn't get caught in our assignment catching
     setup_metadata_slots!(ir, metadata_slot, variable_record_slot)
-  
-    ir.ssavaluetypes = length(ir.code)
+    
     return ir
-    #== 
-    # For debugging, comment out the return and use
-    quote
-        foreach(println, $(Core.Compiler.validate_code(ir)))
-        println()
-        dump($ir; maxdepth=1)
-        println()
-        for (ii,line) in enumerate($(ir.code))
-            println(ii,": ", line)
-        end
-    end
-    ==#
 end
 
 
