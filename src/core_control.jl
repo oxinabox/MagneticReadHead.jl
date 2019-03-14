@@ -42,7 +42,8 @@ function HandEvalMeta(eval_module, stepping_mode)
 end
 
 function HandEvalCtx(eval_module, stepping_mode=StepContinue())
-    return HandEvalCtx(;metadata=HandEvalMeta(eval_module, stepping_mode), pass=handeval_pass)
+    ctx = HandEvalCtx(;metadata=HandEvalMeta(eval_module, stepping_mode), pass=handeval_pass)
+    return Cassette.disablehooks(ctx)
 end
 
 function Cassette.overdub(::typeof(HandEvalCtx()), args...)
@@ -60,16 +61,19 @@ function Cassette.overdub(ctx::HandEvalCtx, f, args...)
         ctx.metadata.stepping_mode isa StepIn ||
         should_instrument(ctx.metadata.breakpoint_rules, method)
 
-    if should_recurse && Cassette.canrecurse(ctx, f, args...)
-        _ctx = HandEvalCtx(ctx.metadata.eval_module, child_stepping_mode(ctx))
-        try
-            return Cassette.recurse(_ctx, f, args...)
-        finally
-            ctx.metadata.stepping_mode = parent_stepping_mode(_ctx)
+    if should_recurse
+        if Cassette.canrecurse(ctx, f, args...)
+            _ctx = HandEvalCtx(ctx.metadata.eval_module, child_stepping_mode(ctx))
+            try
+                return Cassette.recurse(_ctx, f, args...)
+            finally
+                ctx.metadata.stepping_mode = parent_stepping_mode(_ctx)
+            end
+        else
+            @warn "Not able to enter into method." f method
+            return Cassette.fallback(ctx, f, args...)
         end
-    else
-        should_recurse && @warn "Not able to enter into method." f method
-        return Cassette.fallback(ctx, f, args...)
+    else  # !should_recurse
+        return f(args...)
     end
 end
-
