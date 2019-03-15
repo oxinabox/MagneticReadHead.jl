@@ -30,8 +30,8 @@ end
 
 @testset "containing_methods" begin
     # BADTEST: This is actually tied to line numbers in the source code
-    meth = containing_methods(MagneticReadHead, "src/locate.jl", 46)
-    for ln in (45, 46, 47)
+    meth = containing_methods(MagneticReadHead, "src/locate.jl", 56)
+    for ln in (55, 56, 57)
         @test meth == containing_methods(MagneticReadHead, "src/locate.jl", ln)
         @test meth == containing_methods(MagneticReadHead, "locate.jl", ln)
         @test meth == containing_methods("locate.jl", ln)
