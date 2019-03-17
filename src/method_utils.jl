@@ -1,7 +1,8 @@
 moduleof(m::Method) = m.module
-functiontypeof(m::Method) = _functiontypeof(m.sig)
-_functiontypeof(sig::UnionAll) = _functiontypeof(sig.body)
-_functiontypeof(sig::DataType) = sig.parameters[1]
+
+functiontypeof(m::Method) = parameter_typeof(m.sig)[1]
+parameter_typeof(sig::UnionAll) = parameter_typeof(sig.body)
+parameter_typeof(sig::DataType) = sig.parameters
 
 # Last method will always be closest to the types we provided
 function methodof(f, args...)
@@ -20,4 +21,3 @@ methodof(::Core.Builtin, args...) = nothing  # No methods for `Builtin`s
 # function, args types and module.
 # We could define out own `LightMethod`, which exposes also overloads the above
 # functions, while still keeping them working on real methods. And then just use that
-

@@ -33,10 +33,10 @@ for (name, list) in ((:breakpoint, :breakon_rules), (:nodebug, :no_instrument_ru
     @eval export $(rm!)
     @eval $(rm!)(args...) = $(rm!)(GLOBAL_BREAKPOINT_RULES, args...)
     @eval function $(rm!)(the_rules::BreakpointRules, args...)
-        old_num_the_rules = length(the_rules.$list)
+        old_num_rules = length(the_rules.$list)
         to_remove = rules(args...)
         filter!(x->x∈to_remove, the_rules.$list)
-        if length(the_rules.$list) == old_num_the_rules
+        if length(the_rules.$list) == old_num_rules
             @info("No matching $($name) was found, so none removed")
         end
         return the_rules.$list

@@ -75,13 +75,17 @@ function containing_methods(file, linenum)
 end
 
 function sigt2meth(::Type{SIGT})::Method where SIGT
-    params = SIGT.parameters
+    params = parameter_typeof(SIGT)
     func_t = params[1]
     func = func_t.instance
 
     args_t = Tuple{params[2:end]...}
-
-    return only(methods(func, args_t))
+    
+    meths = methods(func, args_t)
+    if length(meths) > 1
+        @info "Multiple possible methods. Falling back to first" func args_t meths
+    end
+    return first(meths)
 end
 
 
