@@ -56,7 +56,7 @@ end
 breakpoint_hit(meth, statement_ind) = nothing
 
 function iron_repl(metadata::HandEvalMeta, meth, statement_ind)
-    @mock breakpoint_hit(meth, statement_ind)
+    breakpoint_hit(meth, statement_ind)
     breadcrumbs(meth, statement_ind)
     
     printstyled("Vars: "; color=:light_yellow)
