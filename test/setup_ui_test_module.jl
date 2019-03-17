@@ -65,6 +65,5 @@ function reset_patched_functions!()
         return readline(io)
     end
 end
-        
 
-include(joinpath(@__DIR__, "demo.jl"))
+include("demo.jl")

@@ -1,6 +1,3 @@
-
-
-
 function eg1()
     z = eg2(2)
     eg_last(z)
