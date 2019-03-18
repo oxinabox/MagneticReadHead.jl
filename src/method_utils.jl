@@ -4,10 +4,9 @@ functiontypeof(m::Method) = parameter_typeof(m.sig)[1]
 parameter_typeof(sig::UnionAll) = parameter_typeof(sig.body)
 parameter_typeof(sig::DataType) = sig.parameters
 
-# Last method will always be closest to the types we provided
 function methodof(f, args...)
     try
-        methods(f, Tuple{typeof.(args)...}).ms[end]
+        @which(f(args...))
     catch
         @warn "Determining methods failed" f arg_types=typeof.(args)
         rethrow()
