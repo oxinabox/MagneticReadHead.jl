@@ -9,7 +9,8 @@ if no matching path is found then an empty list is returned
 function source_paths(mod, file)
     mdata = pkgfiles(mod)
     if mdata === nothing
-        Revise.revise()  # lets see if Revise was pending
+        Revise.track(mod) # maybe it is untracked (e.g. stdlib)
+        Revise.revise()   # Or maybe a Revise was pending
         mdata = pkgfiles(mod)
         if mdata === nothing
             error(
