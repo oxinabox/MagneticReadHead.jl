@@ -1,4 +1,4 @@
-# MagneticReadHead ![https://www.tidyverse.org/lifecycle/#experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)
+# MagneticReadHead ![https://www.tidyverse.org/lifecycle/#maturing](https://img.shields.io/badge/lifecycle-maturing-blue.svg)
 
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://oxinabox.github.io/MagneticReadHead.jl/stable)
 [![Latest](https://img.shields.io/badge/docs-latest-blue.svg)](https://oxinabox.github.io/MagneticReadHead.jl/latest)
