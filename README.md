@@ -28,4 +28,4 @@ With in this you can read (and write) variables,
  - `clear_breakpoints()`, `clear_nodebugs()`: remove all breakpoints/nodebugs.
 
 
-[![asciicast](https://asciinema.org/a/DxgPaaLQQYVV5xXCMuwF5Aa36.svg)](https://asciinema.org/a/DxgPaaLQQYVV5xXCMuwF5Aa36
+[![asciicast](https://asciinema.org/a/DxgPaaLQQYVV5xXCMuwF5Aa36.svg)](https://asciinema.org/a/DxgPaaLQQYVV5xXCMuwF5Aa36)
