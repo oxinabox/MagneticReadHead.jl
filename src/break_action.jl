@@ -1,10 +1,10 @@
-noact(ctx) = nothing
-
+set_stepping_mode!(mode) = metadata->metadata.stepping_mode=mode()
 const actions = OrderedDict([
-   :CC => (desc="Continue",  before_break=noact,                 after_break=noact),
-   :SI => (desc="Step In",   before_break=engage_stepping_mode!, after_break=noact),
-   :SN => (desc="Step Next", before_break=noact,                 after_break=engage_stepping_mode!),
-   :XX => (desc="Abort",     before_break=ctx->throw(UserAbortedException()), after_break=noact),
+   :CC => (desc="Continue",  act=set_stepping_mode!(StepContinue)),
+   :SI => (desc="Step In",   act=set_stepping_mode!(StepIn)),
+   :SN => (desc="Step Next", act=set_stepping_mode!(StepNext)),
+   :SO => (desc="Step Out",  act=set_stepping_mode!(StepOut)),
+   :XX => (desc="Abort",     act=metadata->throw(UserAbortedException())),
 ])
 
 function print_commands()
@@ -14,61 +14,75 @@ function print_commands()
 end
 ################################
 
-function breadcrumbs(f, args)
-   meth = methods(f, typeof.(args)) |> only
+function breadcrumbs(meth, statement_ind)
    printstyled("\nBreakpoint Hit: "; color=:blue)
    printstyled(string(meth); color=:light_blue)
+   #TODO: Translate the statement_ind into a line number
+   line_num = statement_ind2src_linenum(meth, statement_ind)
+   breadcrumbs(string(meth.file), line_num)
    println()
 end
 
-function iron_repl(f, args, eval_module)
-    @mock breadcrumbs(f, args)
-    
-    name2arg = argnames(f, args)
-    
-    printstyled("Args: "; color=:light_yellow)
-    println(join(keys(name2arg), ", "))
-    print_commands()
+function breadcrumbs(file::AbstractString, line_num; nbefore=2, nafter=2)
+   return breadcrumbs(stdout, file, line_num; nbefore=nbefore, nafter=nafter)
+end
 
-    local code_ast
-    while true
-        code_ast = get_user_input()
-        if haskey(actions, code_ast)
-            return code_ast # Send the codeword back
-        end
-        code_ast = subnames(name2arg, code_ast)
-        eval_and_display(code_ast, eval_module)
+function breadcrumbs(io, file::AbstractString, line_num; nbefore=2, nafter=2)
+   @assert(nbefore >= 0)
+   @assert(nafter >= 0)
+   
+   all_lines = readlines(file)
+   first_line_num = max(1, line_num - nbefore)
+   last_line_num = min(length(all_lines), line_num + nafter)
+   
+   for ln in first_line_num:last_line_num
+      line = all_lines[ln]
+      if ln == line_num
+         line = "➧" * line
+         color = :cyan
+      else
+         line = " " * line
+         color = :light_green
+         if ln ∈ (first_line_num, last_line_num)
+            color = :light_black
+         end
+      end
+      printstyled(io, line, "\n"; color=color)
    end
 end
 
-##############################
 
+# this function exists only for mocking so we can test it.
+breakpoint_hit(meth, statement_ind) = nothing
 
-
-function break_action(ctx, f, args...)
-    # This is effectively Cassette.overdub
-    # It is called by all breakpoint overdubs
+function iron_repl(metadata::HandEvalMeta, meth, statement_ind)
+    breakpoint_hit(meth, statement_ind)
+    breadcrumbs(meth, statement_ind)
     
-    ctx.metadata.do_at_next_break_start()  # Do anything we have queued
+    printstyled("Vars: "; color=:light_yellow)
+    println(join(keys(metadata.variables), ", "))
+    print_commands()
     
-    eval_module = ctx.metadata.eval_module
-
-    start_code_word = iron_repl(f, args, eval_module)
-    actions[start_code_word].before_break(ctx)
-
-    ans = Base.invokelatest(Cassette.recurse, ctx, f, args...)
-    
-    actions[start_code_word].after_break(ctx)
-
-    return ans
+    run_repl(metadata.variables, metadata.eval_module)
 end
 
-function do_not_break_action(ctx, f, args...)
-    ctx.metadata.do_at_next_break_start()  # Do anything we have queued
-   
-    if f isa Core.IntrinsicFunction
-       f(args...)
-    else
-       Base.invokelatest(Cassette.recurse, ctx, f, args...)
+
+"""
+    break_action(metadata, meth, statement_ind)
+
+This determines what we should do when we hit a potential point to break at.
+We check if we should actually break here,
+and if so open up a REPL.
+if not, then we continue.
+"""
+function break_action(metadata, meth, statement_ind)
+    if !(metadata.stepping_mode isa StepNext
+         || should_breakon(metadata.breakpoint_rules, meth, statement_ind)
+        )
+        # Only break on StepNext and actual breakpoints
+        return
     end
- end
+
+    code_word = iron_repl(metadata, meth, statement_ind)
+    actions[code_word].act(metadata)
+end
