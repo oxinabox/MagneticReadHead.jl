@@ -13,47 +13,23 @@
 When a breakpoint is hit, then you will be given an Iron REPL to work with-in,
 allowing you to view/manipulate the arguments.
 
+With in this you can read (and write) variables,
+ - Step-Next: to move to the next IR statement
+ - Step-In: to debug in the next function call (assuming next is a function call)
+ - Step-Out: to debug from the next statement the function that called the current function
+ - Continue: proceed to next breakpoint
+ - Abort: terminate running the debugger.
+
 ## Breakpoints
 
- - `set_breakpoint(f)`: Set a breakpoint on call to the function `f`
+ - `set_breakpoint([function|method])`: Set a breakpoint on call to the argument
+ - `set_breakpoint(filename, line number)`: Set a breakpoint on the given line in the given function
+ - `set_nodubug([function|method|module])`: Disable debugging in the given function/method/module
+    - Not having debugging enabled for modules that are not between you and your breakpoints massively speeds up the running of your program.
+ - `list_breakpoints()`, `list_nodebugs()`: list all the breakpoints/nodebugs
+ - `rm_breakpoint(arg...)`, `rm_nodebug(args...)`: remove breakpoints/nodebugs. Takes same arguments as `set_...`.
+ - `clear_breakpoints()`, `clear_nodebugs()`: remove all breakpoints/nodebugs.
 
 
 
 [![asciicast](https://asciinema.org/a/PnffnrsqEkX8Oum71KY9sWMue.svg)](https://asciinema.org/a/PnffnrsqEkX8Oum71KY9sWMue)
-
-
-## Other Julia Debuggers
-
-MagneticReadHead is very early alpha.
-THere are some otehr debugging projects going on,
-and you can certainly mix and match within the same project depending on your needs.
-
-The other projects are also alpha, but almost certainly more mature than MagneticReadHead.
-
-### Rebugger
-[Rebugger](https://github.com/timholy/Rebugger.jl) is the another debugging package for Julia.
-Rebugger is a very nontraditional rebugger, MagneticReadHead is a lot closer to a traditional debugger.
-
-Rebugger has has a user interface based on scooping the code of any function it steps into, into the REPL.
-Then allow you to point your cursor at a function and step into that one.
-Rebugger lets you edit the code at each step.
-MagneticReadHead lets you run code to inspect variables or save data,
-but you can not edit the code itself.
-
-You can step backwards up the call-stack in Rebugger, MagneticReadHead does not support that (yet).
-MagneticReadHead lets you set breakpoints (on function calls), Rebugger does not support that (yet).
-
-MagneticReadHead currently only lets you examine the arguments going into a function.
-Rebugger lets you manipulate the function body however you want (So you can add `@show` to examine the local variables.
-
-Rebugger is based on Revise.jl,
-MagneticReadHead is based on Cassette.jl and uses Revise.jl as a helper library.
-
-
-### ASTInterpreter2
-[ASTInterpreter2](https://github.com/JuliaDebug/ASTInterpreter2.jl) is another debugger for julia.
-Apparently it is working in 1.0. Who knew ? (not me :-P)
-I don't think it has breakpoints yet,
-but it's stepping is a lot more advanced/fine grained.
-
-I need to check it out
