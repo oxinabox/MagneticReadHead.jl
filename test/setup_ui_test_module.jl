@@ -1,5 +1,6 @@
 using Test
 using MagneticReadHead
+using Revise: includet
 # Note: The patching used to be done with Mocking.jl
 # However, that had some weird interactions between modules
 # and includes
@@ -66,4 +67,4 @@ function reset_patched_functions!()
     end
 end
 
-include("demo.jl")
+includet("demo.jl")

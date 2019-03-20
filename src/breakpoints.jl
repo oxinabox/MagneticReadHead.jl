@@ -45,7 +45,7 @@ for (name, list) in ((:breakpoint, :breakon_rules), (:nodebug, :no_instrument_ru
     list_all = Symbol(:list_, name,:s)
     @eval export $(list_all)
     @eval $(list_all)()=$(list_all)(GLOBAL_BREAKPOINT_RULES)
-    @eval $(list_all)(the_rules::BreakpointRules) = display(the_rules.$list)
+    @eval $(list_all)(the_rules::BreakpointRules) = the_rules.$list
 
     clear_all = Symbol(:clear_,name, :s!)
     @eval export $clear_all

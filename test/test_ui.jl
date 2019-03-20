@@ -39,9 +39,9 @@ clear_breakpoints!(); clear_nodebugs!()
 
     # This doesn't work as demo.jl is not in a package.
     set_breakpoint!("demo.jl", 9)
-    @test_broken !isempty(list_breakpoints())
+    @test !isempty(list_breakpoints())
     @iron_debug eg1()
-    @test_broken first.(record) == [eg2]
+    @test first.(record) == [eg2]
 end
 
 
