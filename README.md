@@ -1,4 +1,5 @@
-# MagneticReadHead ![https://www.tidyverse.org/lifecycle/#maturing](https://img.shields.io/badge/lifecycle-maturing-blue.svg)[![Build Status](https://travis-ci.com/oxinabox/MagneticReadHead.jl.svg?branch=master)](https://travis-ci.com/oxinabox/MagneticReadHead.jl)
+# MagneticReadHead ![https://www.tidyverse.org/lifecycle/#maturing](https://img.shields.io/badge/lifecycle-maturing-blue.svg)
+[![Build Status](https://travis-ci.com/oxinabox/MagneticReadHead.jl.svg?branch=master)](https://travis-ci.com/oxinabox/MagneticReadHead.jl)
 [![Build Status](https://ci.appveyor.com/api/projects/status/github/oxinabox/MagneticReadHead.jl?svg=true)](https://ci.appveyor.com/project/oxinabox/MagneticReadHead-jl)
 [![Coveralls](https://coveralls.io/repos/github/oxinabox/MagneticReadHead.jl/badge.svg?branch=master)](https://coveralls.io/github/oxinabox/MagneticReadHead.jl?branch=master)
 
@@ -27,4 +28,4 @@ With in this you can read (and write) variables,
  - `clear_breakpoints()`, `clear_nodebugs()`: remove all breakpoints/nodebugs.
 
 
-[![asciicast](https://asciinema.org/a/DxgPaaLQQYVV5xXCMuwF5Aa36.svg)](https://asciinema.org/a/DxgPaaLQQYVV5xXCMuwF5Aa36)
+[![asciicast](https://asciinema.org/a/DxgPaaLQQYVV5xXCMuwF5Aa36.svg)](https://asciinema.org/a/DxgPaaLQQYVV5xXCMuwF5Aa36
