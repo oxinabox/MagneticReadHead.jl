@@ -15,5 +15,4 @@ end
     
     bar() = map(_->foo(), 1:10)
     @test_throws(DemoException, (@iron_debug foo()))
-
 end
