@@ -37,7 +37,6 @@ clear_breakpoints!(); clear_nodebugs!()
     make_readline_patch(["CC"])
     record = make_recording_breakpoint_hit_patch()
 
-    # This doesn't work as demo.jl is not in a package.
     set_breakpoint!("demo.jl", 9)
     @test !isempty(list_breakpoints())
     @iron_debug eg1()
