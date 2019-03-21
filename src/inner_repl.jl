@@ -42,8 +42,8 @@ function eval_and_display(code_ast, eval_module)
     catch err
         printstyled("ERROR: ", color=:red)
         showerror(stdout, err)
-        println()
     end
+    println()
 end
 
 
