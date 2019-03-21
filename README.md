@@ -21,7 +21,7 @@ Within this you can read (and write) variables,
 
  - `set_breakpoint!([function|method])`: Set a breakpoint on call to the argument
  - `set_breakpoint!(filename, line number)`: Set a breakpoint on the given line in the given function
- - `set_nodebug([function|method|module])`: Disable debugging in the given function/method/module
+ - `set_nodebug!([function|method|module])`: Disable debugging in the given function/method/module
     - Not having debugging enabled for modules that are not between you and your breakpoints massively speeds up the running of your program.
  - `list_breakpoints()`, `list_nodebugs()`: list all the breakpoints/nodebugs
  - `rm_breakpoint!(arg...)`, `rm_nodebug!(args...)`: remove breakpoints/nodebugs. Takes same arguments as `set_...`.
