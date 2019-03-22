@@ -16,8 +16,7 @@ end
 
 function breadcrumbs(meth, statement_ind)
    printstyled("\nBreakpoint Hit: "; color=:blue)
-   printstyled(string(meth); color=:light_blue)
-   #TODO: Translate the statement_ind into a line number
+   printstyled(string(meth, "\n"); color=:light_blue)
    line_num = statement_ind2src_linenum(meth, statement_ind)
    breadcrumbs(string(meth.file), line_num)
    println()
@@ -31,7 +30,7 @@ function breadcrumbs(io, file::AbstractString, line_num; nbefore=2, nafter=2)
    @assert(nbefore >= 0)
    @assert(nafter >= 0)
    
-   all_lines = readlines(file)
+   all_lines = loc_for_file(file)
    first_line_num = max(1, line_num - nbefore)
    last_line_num = min(length(all_lines), line_num + nafter)
    

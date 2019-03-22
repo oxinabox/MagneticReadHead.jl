@@ -140,3 +140,27 @@ function before_body_linenum(ir)
     first_lineinfo = ir.linetable[first(ir.codelocs)]
     return first_lineinfo.line - 1
 end
+
+######################################################
+
+"""
+    loc_for_file(file)
+Returns a vector of lines of code for the file.
+This special cases the name `"REPL[\\d]"`, as being REPL history
+and so returns that REPL history cell instead.
+If for some reason the file can not be found,
+this returns a vector with a single line and a message explaining as such.
+"""
+function loc_for_file(file::AbstractString)
+    if isfile(file)
+        return readlines(file)
+    elseif startswith(file, "REPL[") && isdefined(Base, :active_repl)
+        # extract the number from "REPL[123]"
+        hist_idx = parse(Int,string(file)[6:end-1])
+        hist = Base.active_repl.interface.modes[1].hist
+        source_code = hist.history[hist.start_idx+hist_idx]
+        return split(source_code, "\n")
+    else
+        return ["-- source for $file not found --"]
+    end
+end

@@ -5,7 +5,8 @@ using Test
 using MagneticReadHead:
     source_paths,
     containing_methods,
-    src_line2ir_statement_ind
+    src_line2ir_statement_ind,
+    loc_for_file
 
 @testset "src_line2ir_statement_ind" begin
     ir1line = first(methods(()->1)) |> Base.uncompressed_ast
@@ -45,4 +46,14 @@ end
             )
         end
     end
+end
+
+@testset "loc_for_file" begin
+    failoutput = loc_for_file("NOT REAL")
+    @test failoutput isa Vector{String}
+    @test length(failoutput)==1
+
+    output = loc_for_file(@__FILE__)
+    @test output isa Vector{String}
+    @test length(output) > 1
 end
