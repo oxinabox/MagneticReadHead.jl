@@ -36,7 +36,7 @@ end
         @test meth == containing_methods(MagneticReadHead, "src/locate.jl", ln)
         @test meth == containing_methods(MagneticReadHead, "locate.jl", ln)
         @test meth == containing_methods("locate.jl", ln)
-        cd(@__DIR__) do  # Be in this directory, no matter where rrunning tests
+        cd(@__DIR__) do  # Be in this directory, no matter where running tests
             @test meth ==  # Absolute path
                 containing_methods(MagneticReadHead, abspath("../src/locate.jl"),ln)
         
