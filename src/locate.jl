@@ -22,6 +22,14 @@ function source_paths(mod, file)
     mfiles = joinpath.(mdata.basedir, mdata.files)
     
     file = expanduser(file)
+    if isfile(file)
+        # This was something point to a real file that exists at a location
+        # not just filename **somewhere**
+        # It may have been a relative path, if so that is hard to deal with
+        # So we will make it absolute.
+        file=abspath(file)
+    end
+    
     if !isabspath(file)
         # We do not need it to be absolute
         # But we do want it to start with a "/" if it isn't
@@ -30,7 +38,6 @@ function source_paths(mod, file)
         file = "/" * file
     end
     matched_inds = map(mfile->endswith(mfile, file), mfiles)
-     
     return mfiles[matched_inds]
 end
 
@@ -61,8 +68,9 @@ function containing_methods(mod, file, linenum)
     # only matches to
     # statement within the functions body, not from the line it is "declared"
     # or any intervening whitespace. It also doesn't match to the `end` line.
-    
-    return map(sigt2meth, sigs)
+
+    ret = map(sigt2meth, sigs)
+    return ret
 end
 
 function containing_methods(file, linenum)

@@ -30,19 +30,18 @@ end
 
 @testset "containing_methods" begin
     # BADTEST: This is actually tied to line numbers in the source code
-    meth = containing_methods(MagneticReadHead, "src/locate.jl", 56)
-    for ln in (55, 56, 57)
+    LINENUM = 66
+    meth = containing_methods(MagneticReadHead, "src/locate.jl", LINENUM)
+    for ln in LINENUM .+ [-1, 0, 1]
         @test meth == containing_methods(MagneticReadHead, "src/locate.jl", ln)
         @test meth == containing_methods(MagneticReadHead, "locate.jl", ln)
         @test meth == containing_methods("locate.jl", ln)
-        @test_broken meth ==
-            containing_methods(MagneticReadHead, "../src/locate.jl", ln)
-        cd(@__DIR__) do
-            @test meth == containing_methods(
-                MagneticReadHead,
-                realpath("../src/locate.jl"),
-                ln
-            )
+        cd(@__DIR__) do  # Be in this directory, no matter where rrunning tests
+            @test meth ==  # Absolute path
+                containing_methods(MagneticReadHead, abspath("../src/locate.jl"),ln)
+        
+            @test meth ==  # Relative path
+                containing_methods(MagneticReadHead, "../src/locate.jl", ln)
         end
     end
 end
