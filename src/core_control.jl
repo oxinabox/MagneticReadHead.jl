@@ -51,7 +51,7 @@ function Cassette.overdub(::typeof(HandEvalCtx()), args...)
 end
 
 
-function Cassette.overdub(ctx::HandEvalCtx, f, args...)
+function Cassette.overdub(ctx::HandEvalCtx, @nospecialize(f), @nospecialize(args...))
     # This is basically the epicenter of all the logic
     # We control the flow of stepping modes
     # and which methods are instrumented or not.
