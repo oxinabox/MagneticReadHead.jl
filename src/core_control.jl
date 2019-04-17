@@ -23,7 +23,7 @@ parent_stepping_mode(::StepOut) = StepNext()   # This is what they want
 
 
 mutable struct HandEvalMeta
-    variables::OrderedDict{Symbol, Any}
+    variables::LittleDict{Symbol, Any}
     eval_module::Module
     stepping_mode::SteppingMode
     breakpoint_rules::BreakpointRules
@@ -34,7 +34,7 @@ const GLOBAL_BREAKPOINT_RULES = BreakpointRules()
 
 function HandEvalMeta(eval_module, stepping_mode)
     return HandEvalMeta(
-        OrderedDict{Symbol,Any}(),
+        LittleDict{Symbol,Any}(),
         eval_module,
         stepping_mode,
         GLOBAL_BREAKPOINT_RULES
@@ -51,11 +51,10 @@ function Cassette.overdub(::typeof(HandEvalCtx()), args...)
 end
 
 
-function Cassette.overdub(ctx::HandEvalCtx, f, args...)
+function Cassette.overdub(ctx::HandEvalCtx, @nospecialize(f), @nospecialize(args...))
     # This is basically the epicenter of all the logic
     # We control the flow of stepping modes
     # and which methods are instrumented or not.
-    @debug "overdubbing" f args
     method = methodof(f, args...)
     should_recurse =
         ctx.metadata.stepping_mode isa StepIn ||

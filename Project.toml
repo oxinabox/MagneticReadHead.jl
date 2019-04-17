@@ -12,8 +12,8 @@ Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 
 [compat]
 CodeTracking = "0.4.0"
+OrderedCollections = "1.1"
 Revise = "2"
-# Revise 1.1 works, except for setting breakpoints on files outside of packages
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
