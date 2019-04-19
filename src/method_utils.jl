@@ -5,8 +5,7 @@ Returns the module associated with a method.
 Note: this is not the module where it was defined (m.module)
 but rather the module for which it's function was defined.
 """
-moduleof(m::Method) = functiontypeof(m).name.module
-
+moduleof(m) = functiontypeof(m).name.module
 functiontypeof(m::Method) = parameter_typeof(m.sig)[1]
 parameter_typeof(sig::UnionAll) = parameter_typeof(sig.body)
 parameter_typeof(sig::DataType) = sig.parameters
@@ -42,3 +41,5 @@ end
 
 # Builtin's do not have methods
 accepts(::Method, ::DispatchAttempt{<:Core.Builtin}) = false
+
+functiontypeof(m::DispatchAttempt{F}) where F = F

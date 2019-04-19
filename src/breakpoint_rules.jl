@@ -7,7 +7,9 @@ Rule(v) = Rule(v, 0)
 
 ##############################################################################
 # instrumenting rules
-match(rule::Rule{Method}, method) = method == rule.v
+match(rule::Rule{Method}, method::Method) = method == rule.v
+match(rule::Rule{Method}, da::DispatchAttempt) = accepts(rule.v, da)
+
 match(rule::Rule{Module}, method) = moduleof(method) == rule.v
 function match(rule::Rule{F}, method) where F
     # This one is for functions

@@ -4,7 +4,7 @@ using Test
 @testset "breakon rules" begin
     # Helper for defining rules during tests
     borule(args...) = BreakpointRules(Rule[], [Rule(args...)])
-    
+
     @testset "module" begin
         # I don't really think this is useful, but it does work
         rules = borule(Iterators)
@@ -22,7 +22,7 @@ using Test
             @test !should_breakon(rules, meth, 2)
         end
     end
-    
+
     @testset "Method" begin
         meths  = collect(methods(pwd))
         rules = borule(meths[1])
@@ -127,7 +127,7 @@ end
     @test should_instrument(rules, first(methods(sum)))
     @test !should_instrument(rules, first(methods(Iterators.flatten)))
     @test should_instrument(rules, first(methods(Iterators.drop)))
-    
+
 
     @test !should_breakon(rules, first(methods(+)), 0)
     @test !should_breakon(rules, first(methods(+)), 2)
