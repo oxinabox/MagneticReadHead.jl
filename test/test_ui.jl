@@ -31,6 +31,15 @@ clear_breakpoints!(); clear_nodebugs!()
 end
 
 ###################################################
+clear_breakpoints!(); clear_nodebugs!()
+@testset "No breakpoints, With no instrumenting of Base" begin
+    make_readline_patch([])
+    record = make_recording_breakpoint_hit_patch()
+    set_nodebug!(Base)
+    @iron_debug eg1()
+    @test record == []
+end
+###########################
 
 clear_breakpoints!(); clear_nodebugs!()
 @testset "breakpoint by file and linenum" begin

@@ -16,6 +16,11 @@ Base.eps(::typeof(moduleof)) = "dummy"
     for meth in methods(eps)
         @test moduleof(meth) == Base
     end
+
+
+    for meth in methods(Vector)  # this is a UnionAll
+        @test moduleof(meth) == Core
+    end
 end
 
 

@@ -27,7 +27,7 @@ end
 
 function set_nodebug!(the_rules::BreakpointRules, arg::T) where T
     T !== Method || throw(ArgumentError("Disabling instrumentation per method, is not supported."))
-    return push!(the_rules.breakon_rules, Rule(arg))
+    return push!(the_rules.no_instrument_rules, Rule(arg))
 end
 
 for (name, list) in ((:breakpoint, :breakon_rules), (:nodebug, :no_instrument_rules))
