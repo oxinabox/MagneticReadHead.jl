@@ -3,11 +3,11 @@ module MagneticReadHead
 using Base: invokelatest
 using Cassette
 using MacroTools
-using OrderedCollections
 using InteractiveUtils
 using CodeTracking
 # We don't use Revise, but if it isn't loaded CodeTracking has issues
 using Revise: Revise
+using OrderedCollections
 
 export @iron_debug
 
@@ -38,7 +38,6 @@ macro iron_debug(body)
             # Disable any stepping left-over
             ctx.metadata.stepping_mode =  StepContinue()
         end
-
     end
 end
 

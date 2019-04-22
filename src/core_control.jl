@@ -23,18 +23,16 @@ parent_stepping_mode(::StepOut) = StepNext()   # This is what they want
 
 
 mutable struct HandEvalMeta
-    variables::LittleDict{Symbol, Any}
     eval_module::Module
     stepping_mode::SteppingMode
     breakpoint_rules::BreakpointRules
 end
 
-# TODO: Workout how we are actually going to do this in a nonglobal way
+# TODO: Workout how and if we are actually going to do this in a nonglobal way
 const GLOBAL_BREAKPOINT_RULES = BreakpointRules()
 
 function HandEvalMeta(eval_module, stepping_mode)
     return HandEvalMeta(
-        LittleDict{Symbol,Any}(),
         eval_module,
         stepping_mode,
         GLOBAL_BREAKPOINT_RULES
@@ -61,11 +59,13 @@ function Cassette.overdub(ctx::HandEvalCtx, f, @nospecialize(args...))
 
     if should_recurse
         if Cassette.canrecurse(ctx, f, args...)
-            _ctx = HandEvalCtx(ctx.metadata.eval_module, child_stepping_mode(ctx))
+            # TODO: Workout this logic
+            #_ctx = HandEvalCtx(ctx.metadata.eval_module, child_stepping_mode(ctx))
             try
-                return Cassette.recurse(_ctx, f, args...)
+                return Cassette.recurse(ctx, f, args...)
             finally
-                ctx.metadata.stepping_mode = parent_stepping_mode(_ctx)
+                # TODO: workout this logic
+                #ctx.metadata.stepping_mode = parent_stepping_mode(ctx)
             end
         else
             @assert f isa Core.Builtin
