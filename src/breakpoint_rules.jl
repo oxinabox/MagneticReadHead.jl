@@ -7,14 +7,20 @@ Rule(v) = Rule(v, 0)
 
 ##############################################################################
 # instrumenting rules
-match(rule::Rule{Method}, method) = method == rule.v
-match(rule::Rule{Module}, method) = moduleof(method) == rule.v
-function match(rule::Rule{F}, method) where F
-    # This one is for functions
+match(rule::Rule{Method}, method::Method) = method == rule.v
+match(rule::Rule{Method}, f::F) where F = functiontypeof(rule.v) <: F
+
+match(rule::Rule{Module}, method::Method) = moduleof(method) == rule.v
+match(rule::Rule{Module}, ::F) where F = F.name.module == rule.v
+
+# function
+match(rule::Rule{F}, ::G) where {F,G} = false
+match(rule::Rule{F}, ::F) where F = true
+function match(rule::Rule{F}, method::Method) where F
     return functiontypeof(method) <: F
 end
 
-#breakon rules
+# For breakpoints
 function match(rule::Rule, method, statement_ind)
     return match(rule, method) && rule.statement_ind == statement_ind
 end
@@ -37,10 +43,10 @@ BreakpointRules() = BreakpointRules(Rule[], Rule[])
 
 
 """
-    should_instrument(rules, method)
+    should_instrument(rules, method|function)
 
-Returns true if according to the rules, this method should be instrumented
-with potential breakpoints.
+Returns true if according to the rules, the specified
+method or function should be instrumented with potential breakpoints.
 The default is to instrument everything.
 """
 function should_instrument(rules::BreakpointRules, method)

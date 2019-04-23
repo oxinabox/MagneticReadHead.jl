@@ -21,14 +21,20 @@ rules(args...) = (Rule(args...),)  # default to just constructing a Rule
 
 #TODO: think hard about API, eg maybe `set!(Breakpoint(foo,1))` might be nicest
 
+function set_breakpoint!(the_rules::BreakpointRules, args...)
+    return append!(the_rules.breakon_rules, rules(args...))
+end
+
+function set_nodebug!(the_rules::BreakpointRules, arg::T) where T
+    T !== Method || throw(ArgumentError("Disabling instrumentation per method, is not supported."))
+    return push!(the_rules.no_instrument_rules, Rule(arg))
+end
+
 for (name, list) in ((:breakpoint, :breakon_rules), (:nodebug, :no_instrument_rules))
     set! = Symbol(:set_, name, :!)
     @eval export $(set!)
     @eval $(set!)(args...) = $(set!)(GLOBAL_BREAKPOINT_RULES, args...)
-    @eval function $(set!)(the_rules::BreakpointRules, args...)
-        return append!(the_rules.$list, rules(args...))
-    end
-
+    # actual set definitions are above
     rm! = Symbol(:rm_, name, :!)
     @eval export $(rm!)
     @eval $(rm!)(args...) = $(rm!)(GLOBAL_BREAKPOINT_RULES, args...)

@@ -1,9 +1,25 @@
 using Test
-using MagneticReadHead: moduleof, functiontypeof, methodof
+using InteractiveUtils
+using MagneticReadHead: moduleof, functiontypeof
+
+
+# Define an extra method of eps in this module, so we can test methods of
+Base.eps(::typeof(moduleof)) = "dummy"
 
 @testset "moduleof" begin
     for meth in methods(detect_ambiguities)
         @test moduleof(meth) == Test
+    end
+
+    # We define a verion of eps in this module
+    # but we expect that it is still counted as being in `Base`
+    for meth in methods(eps)
+        @test moduleof(meth) == Base
+    end
+
+
+    for meth in methods(Vector)  # this is a UnionAll
+        @test moduleof(meth) == Core
     end
 end
 
@@ -18,35 +34,4 @@ end
     for meth in methods(detect_ambiguities)
         @test functiontypeof(meth) <: typeof(detect_ambiguities)
     end
-end
-
-@testset "methodof" begin
-    @testset "BuiltIns" begin
-        @test methodof(Core.typeof) === nothing
-        @test methodof(Core.typeof, 1) === nothing
-    end
-
-    @testset "Ensure no errors" begin
-       @test methodof(+, 1, 1) isa Method
-       @test methodof(+, 2, 2.0) isa Method
-       @test methodof(+, 2.0, 2 + im) isa Method
-       
-       @test methodof(eps) isa Method
-       @test methodof(eps, Float32) isa Method
-    end
-
-    @testset "local function no args" begin
-        bar() = 1
-        @test functiontypeof(methodof(bar)) == typeof(bar)
-        @test moduleof(methodof(bar)) == @__MODULE__
-    end
-
-
-    @testset "local function 1 arg" begin
-        foo(::Int) = 1
-        @test functiontypeof(methodof(foo, 20)) == typeof(foo)
-        @test moduleof(methodof(foo, 20)) == @__MODULE__
-    end
-
-
 end

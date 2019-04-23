@@ -14,7 +14,7 @@ using InteractiveUtils
     #@show ir
     #@show ir.codelocs
     errors = Core.Compiler.validate_code(ir)
-    @test_broken errors == []  # https://github.com/jrevels/Cassette.jl/pull/112
+    @test errors == []
     res = Cassette.recurse(ctx, Base._totuple, Tuple, 20)
     @test res == (20,)
 end

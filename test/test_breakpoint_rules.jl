@@ -4,7 +4,7 @@ using Test
 @testset "breakon rules" begin
     # Helper for defining rules during tests
     borule(args...) = BreakpointRules(Rule[], [Rule(args...)])
-    
+
     @testset "module" begin
         # I don't really think this is useful, but it does work
         rules = borule(Iterators)
@@ -22,7 +22,7 @@ using Test
             @test !should_breakon(rules, meth, 2)
         end
     end
-    
+
     @testset "Method" begin
         meths  = collect(methods(pwd))
         rules = borule(meths[1])
@@ -49,20 +49,16 @@ using Test
             @test !should_breakon(rules, meth, 2)
         end
     end
-
-
-
-
 end
 
 @testset "default" begin
     rules = BreakpointRules()
 
     # should instrument everything
-    @test should_instrument(rules, first(methods(+)))
-    @test should_instrument(rules, first(methods(sum)))
-    @test should_instrument(rules, first(methods(Iterators.flatten)))
-    @test should_instrument(rules, first(methods(Iterators.drop)))
+    @test should_instrument(rules, +)
+    @test should_instrument(rules, sum)
+    @test should_instrument(rules, Iterators.flatten)
+    @test should_instrument(rules, Iterators.drop)
 
     @test !should_breakon(rules, first(methods(+)), 0)
     @test !should_breakon(rules, first(methods(+)), 2)
@@ -79,10 +75,10 @@ end
         [Rule(Iterators)],
         []
     )
-    @test should_instrument(rules, first(methods(+)))
-    @test should_instrument(rules, first(methods(sum)))
-    @test !should_instrument(rules, first(methods(Iterators.flatten)))
-    @test !should_instrument(rules, first(methods(Iterators.drop)))
+    @test should_instrument(rules, +)
+    @test should_instrument(rules, sum)
+    @test !should_instrument(rules, Iterators.flatten)
+    @test !should_instrument(rules, Iterators.drop)
 
 
     @test !should_breakon(rules, first(methods(+)), 0)
@@ -102,11 +98,10 @@ end
         [Rule(Base)],
         []
     )
-    @test !should_instrument(rules, first(methods(+)))
-    @test !should_instrument(rules, first(methods(sum)))
-    @test should_instrument(rules, first(methods(Iterators.flatten)))
-    @test should_instrument(rules, first(methods(Iterators.drop)))
-
+    @test !should_instrument(rules, +)
+    @test !should_instrument(rules, sum)
+    @test should_instrument(rules, Iterators.flatten)
+    @test should_instrument(rules, Iterators.drop)
 
     @test !should_breakon(rules, first(methods(+)), 0)
     @test !should_breakon(rules, first(methods(+)), 2)
@@ -123,11 +118,10 @@ end
         [Rule(Iterators)],
         [Rule(Iterators.drop)]
     )
-    @test should_instrument(rules, first(methods(+)))
-    @test should_instrument(rules, first(methods(sum)))
-    @test !should_instrument(rules, first(methods(Iterators.flatten)))
-    @test should_instrument(rules, first(methods(Iterators.drop)))
-    
+    @test should_instrument(rules, +)
+    @test should_instrument(rules, sum)
+    @test !should_instrument(rules, Iterators.flatten)
+    @test should_instrument(rules, Iterators.drop)
 
     @test !should_breakon(rules, first(methods(+)), 0)
     @test !should_breakon(rules, first(methods(+)), 2)
@@ -138,5 +132,3 @@ end
     @test should_breakon(rules, first(methods(Iterators.drop)), 0)
     @test !should_breakon(rules, first(methods(Iterators.drop)), 5)
 end
-
-
