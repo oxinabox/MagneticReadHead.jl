@@ -12,7 +12,7 @@ Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 
 [compat]
 Cassette = "0.2.2"
-CodeTracking = "0.4.0"
+CodeTracking = "0.5.0"
 OrderedCollections = "1.1"
 Revise = "2.1.3"
 
