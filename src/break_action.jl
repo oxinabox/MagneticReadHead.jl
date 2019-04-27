@@ -75,7 +75,7 @@ and if so open up a REPL.
 if not, then we continue.
 """
 function break_action(metadata, meth, statement_ind)
-    if !(metadata.stepping_mode isa StepNext
+    if !(metadata.stepping_mode === StepNext
          || should_breakon(metadata.breakpoint_rules, meth, statement_ind)
         )
         # Only break on StepNext and actual breakpoints

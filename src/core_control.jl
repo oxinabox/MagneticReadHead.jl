@@ -56,10 +56,13 @@ function Cassette.overdub(ctx::HandEvalCtx, f, @nospecialize(args...))
     if should_recurse
         if Cassette.canrecurse(ctx, f, args...)
             child_stepping_mode!(ctx)
+            cur_variables = ctx.metadata.variables  # store these for after the call
+            ctx.metadata.variables = LittleDict{Symbol, Any}()
             try
-                return Cassette.recurse(_ctx, f, args...)
+                return Cassette.recurse(ctx, f, args...)
             finally
                 parent_stepping_mode!(ctx)
+                ctx.metadata.variables = cur_variables  # restore them
             end
         else
             #@assert f isa Core.Builtin
