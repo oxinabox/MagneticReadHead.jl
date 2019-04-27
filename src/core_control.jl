@@ -2,7 +2,6 @@ Cassette.@context HandEvalCtx
 
 @enum SteppingMode StepIn StepNext StepContinue StepOut
 
-
 # On the way in
 @inline function child_stepping_mode!(ctx::HandEvalCtx)
     cur_mode = ctx.metadata.stepping_mode
@@ -10,7 +9,7 @@ Cassette.@context HandEvalCtx
 end
 
 # On the way out
-@inline function parent_stepping_mode!(ctx::HandEvalCtx)
+function parent_stepping_mode!(ctx::HandEvalCtx)
     cur_mode = ctx.metadata.stepping_mode
     ctx.metadata.stepping_mode = cur_mode === StepContinue ? StepContinue : StepNext
 end
@@ -60,7 +59,7 @@ function Cassette.overdub(ctx::HandEvalCtx, f, @nospecialize(args...))
                 parent_stepping_mode!(ctx)
             end
         else
-            #@assert f isa Core.Builtin
+            @assert f isa Core.Builtin
             #@warn "Not able to enter into method" f args
             return Cassette.fallback(ctx, f, args...)
         end
