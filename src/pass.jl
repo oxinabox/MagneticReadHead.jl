@@ -1,3 +1,20 @@
+#==
+Instumenting Debugger Pass:
+
+The purpose of this pass is to modify the IR code to instert debug statements.
+One is inserted before each other statement in the IR.
+Rough pseudocode for a Debug statment:
+```
+if should_break  # i.e. this_breakpoint_is_active
+    variables = filter(isdefined, slots)
+    call break_action(variables)  # launch the debugging REPL etc.
+end
+```
+The reality is a bit more complicated, as you can't ask if a variable is defined
+before it is declared. But that is the principle.
+==#
+
+
 # For ease of editting we have this here
 # It should be set to just redistpatch
 function handeval_break_action(ctx, meth, stmt_number, slotnames, slotvalues)
@@ -51,7 +68,8 @@ end
 
 """
     created_on
-Given an `ir` returns a vector the same length as slotnames, with the index corresponds to that on which each was created
+Given an `ir` returns a vector the same length as slotnames,
+which each entry is the ir statment index for where the coresponding variable was delcared
 """
 function created_on(ir)
     created_stmt_ind = zeros(length(ir.slotnames))  # default to assuming everything created before start
@@ -64,8 +82,28 @@ function created_on(ir)
     return created_stmt_ind
 end
 
+"""
+    call_expr(mod:Module, func::Symbol, args...)
+This function returns the IR exprression for calling the names function `func` from module `mod`, with the
+given args. It is maked with `nooverdub` which will stop Cassette recursing into it.
+"""
 call_expr(mod::Module, func::Symbol, args...) = Expr(:call, Expr(:nooverdub, GlobalRef(mod, func)), args...)
 
+
+"""
+    enter_debug_statements(slotnames, slot_created_ons, method::Method, ind::Int, orig_ind::Int)
+
+This returns the IR code for a debug statement (as decribed at the top of this file).
+This basically means creating code that checks if we `should_break` at this statement,
+and if so works out what variable are defined, then passing those to the `break_action` call which will
+show the dubugging prompt.
+
+ - slotnames: the names of the slots from the CodeInfo
+ - slot_created_on: a vector saying where the variables were declared (as returned by `created_on`
+ - method: the method being instruments
+ - ind: the actual index in the code IR this is being  inserted at. This is where the SSAValues start from
+ - orig_ind: the index in the original code IR for where this is being inserted. (before other debug statements were inserted above)
+"""
 function enter_debug_statements(slotnames, slot_created_ons, method::Method, ind::Int, orig_ind::Int)
     statements = [
         call_expr(MagneticReadHead, :handeval_should_break, Expr(:contextslot), method, orig_ind),
@@ -99,12 +137,15 @@ function enter_debug_statements(slotnames, slot_created_ons, method::Method, ind
         orig_ind,
         names_ssa, values_ssa)
     )
-
+    # We now know how many statements we added so can set how far we are going to jump in the inital condition.
     statements[2] = Expr(:gotoifnot, stop_cond_ssa, ind + length(statements))
     return statements
 end
 
-
+"""
+    enter_debug_statements_count(slot_created_ons, orig_ind)
+returns the length of the corresponding `enter_debug_statements` call.
+"""
 function enter_debug_statements_count(slot_created_ons, orig_ind)
     # this function intentionally mirrors structure of enter_debug_statements
     # for ease of updating to match it
@@ -119,7 +160,11 @@ function enter_debug_statements_count(slot_created_ons, orig_ind)
     return n_statements
 end
 
-
+"""
+    instrument!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflection)
+This is the transform for the debugger cassette pass.
+it is the main method of this file, and calls all the ones defined earlier.
+"""
 function instrument!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflection)
     ir = reflection.code_info
 
