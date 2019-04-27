@@ -9,7 +9,9 @@ if no matching path is found then an empty list is returned
 function source_paths(mod, file)
     mdata = pkgfiles(mod)
     if mdata === nothing
-        Revise.track(mod) # maybe it is untracked (e.g. stdlib)
+        is_stdlib = CodeTracking.PkgId(mod).uuid === nothing
+        is_stdlib && Revise.track(mod) # need to track stdlibs explictly
+
         Revise.revise()   # Or maybe a Revise was pending
         mdata = pkgfiles(mod)
         if mdata === nothing

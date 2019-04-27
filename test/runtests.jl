@@ -1,3 +1,4 @@
+using Revise: Revise
 using MagneticReadHead
 using Test
 
@@ -9,8 +10,8 @@ test_files = (
     "test_locate.jl",
     "test_method_utils.jl",
     "test_utils.jl",
-    "test_pass.jl",
-    "test_ui.jl",
+#    "test_pass.jl",
+#    "test_ui.jl",
 )
 
 @testset "MagneticReadHead" begin
