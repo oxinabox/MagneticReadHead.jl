@@ -1,4 +1,4 @@
-set_stepping_mode!(mode) = metadata->metadata.stepping_mode=mode()
+set_stepping_mode!(mode) = metadata->metadata.stepping_mode=mode
 const actions = OrderedDict([
    :CC => (desc="Continue",  act=set_stepping_mode!(StepContinue)),
    :SI => (desc="Step In",   act=set_stepping_mode!(StepIn)),
@@ -70,7 +70,7 @@ end
 Determines if we should actualy break at a potential breakpoint
 """
 function should_break(ctx, meth, statement_ind)
-    return ctx.metadata.stepping_mode isa StepNext ||
+    return ctx.metadata.stepping_mode === StepNext ||
         should_breakon(ctx.metadata.breakpoint_rules, meth, statement_ind)
 end
 

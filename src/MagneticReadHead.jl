@@ -28,7 +28,7 @@ struct UserAbortedException <: Exception end
 
 macro iron_debug(body)
     quote
-        ctx = HandEvalCtx($(__module__), StepContinue())
+        ctx = HandEvalCtx($(__module__), StepContinue)
         try
             return Cassette.recurse(ctx, ()->$(esc(body)))
         catch err
@@ -36,7 +36,7 @@ macro iron_debug(body)
             nothing
         finally
             # Disable any stepping left-over
-            ctx.metadata.stepping_mode =  StepContinue()
+            ctx.metadata.stepping_mode =  StepContinue
         end
     end
 end
