@@ -2,7 +2,6 @@ using MagneticReadHead
 using Test
 
 test_files = (
-    "test_ui.jl",
     "test_behavour.jl",
     "test_breadcrumbs.jl",
     "test_breakpoint_rules.jl",
@@ -11,7 +10,7 @@ test_files = (
     "test_method_utils.jl",
     "test_utils.jl",
     "test_pass.jl",
-    "test_variable_capture.jl",
+    "test_ui.jl",
 )
 
 @testset "MagneticReadHead" begin
