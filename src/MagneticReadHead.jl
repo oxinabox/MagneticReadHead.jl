@@ -16,7 +16,9 @@ include("method_utils.jl")
 
 include("breakpoint_rules.jl")
 include("core_control.jl")
+@nospecialize
 include("pass.jl")
+@specialize
 
 include("inner_repl.jl")
 include("break_action.jl")
