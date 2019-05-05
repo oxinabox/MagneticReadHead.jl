@@ -1,4 +1,4 @@
-set_stepping_mode!(mode) = metadata->metadata.stepping_mode=mode()
+set_stepping_mode!(mode) = metadata->metadata.stepping_mode=mode
 const actions = OrderedDict([
    :CC => (desc="Continue",  act=set_stepping_mode!(StepContinue)),
    :SI => (desc="Step In",   act=set_stepping_mode!(StepIn)),
@@ -75,7 +75,7 @@ and if so open up a REPL.
 if not, then we continue.
 """
 function break_action(metadata, meth, statement_ind)
-    if !(metadata.stepping_mode isa StepNext
+    if !(metadata.stepping_mode === StepNext
          || should_breakon(metadata.breakpoint_rules, meth, statement_ind)
         )
         # Only break on StepNext and actual breakpoints
