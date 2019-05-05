@@ -66,7 +66,7 @@ function iron_repl(metadata::HandEvalMeta, meth, statement_ind, variables)
 end
 
 """
-    should_breakon
+    should_break
 Determines if we should actualy break at a potential breakpoint
 """
 function should_break(ctx, meth, statement_ind)
