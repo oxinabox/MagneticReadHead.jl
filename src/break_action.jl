@@ -1,4 +1,4 @@
-set_stepping_mode!(mode) = metadata->metadata.stepping_mode=mode()
+set_stepping_mode!(mode) = metadata->metadata.stepping_mode=mode
 const actions = OrderedDict([
    :CC => (desc="Continue",  act=set_stepping_mode!(StepContinue)),
    :SI => (desc="Step In",   act=set_stepping_mode!(StepIn)),
