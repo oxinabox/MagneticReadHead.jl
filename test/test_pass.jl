@@ -36,19 +36,20 @@ end
     end
 end
 
+function boopa!(x,y)
+    x[1]=y
+    return x
+end
+
 @testset "basic mutating function" begin
-    function boopa!(x,y)
-        x[1]=y
-        return x
-    end
     ctx = HandEvalCtx(@__MODULE__)
     res = Cassette.recurse(ctx, boopa!, [1,2], 3)
     @test res == [3,2]
+
     @testset "function calling a basic mutating function" begin
         ctx = HandEvalCtx(@__MODULE__)
-        res = Cassette.recurse(ctx, ()->boopa!([1,2],3))
-        @test res == [3,2]
+        res = Cassette.recurse(ctx, ()->boopa!([1,2],4))
+        @test res == [4,2]
     end
 end
-
 
