@@ -15,15 +15,6 @@ before it is declared. But that is the principle.
 ==#
 
 
-# For ease of editting we have this here
-# It should be set to just redistpatch
-function handeval_break_action(ctx, meth, stmt_number, slotnames, slotvalues)
-    break_action(ctx, meth, stmt_number, slotnames, slotvalues)
-end
-function handeval_should_break(ctx, meth, stmt_number)
-    should_break(ctx, meth, stmt_number)
-end
-
 
 """
     extended_insert_statements!(code, codelocs, stmtcount, newstmts)
@@ -106,7 +97,7 @@ show the dubugging prompt.
 """
 function enter_debug_statements(slotnames, slot_created_ons, method::Method, ind::Int, orig_ind::Int)
     statements = [
-        call_expr(MagneticReadHead, :handeval_should_break, Expr(:contextslot), method, orig_ind),
+        call_expr(MagneticReadHead, :should_break, Expr(:contextslot), method, orig_ind),
         Expr(:REPLACE_THIS_WITH_GOTOIFNOT_AT_END),
         Expr(:call, Expr(:nooverdub, GlobalRef(Base, :getindex)), GlobalRef(Core, :Symbol)),
         Expr(:call, Expr(:nooverdub, GlobalRef(Base, :getindex)), GlobalRef(Core, :Any)),
@@ -131,7 +122,7 @@ function enter_debug_statements(slotnames, slot_created_ons, method::Method, ind
     end
 
     push!(statements, call_expr(
-        MagneticReadHead, :handeval_break_action,
+        MagneticReadHead, :break_action,
         Expr(:contextslot),
         method,
         orig_ind,
