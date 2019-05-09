@@ -5,7 +5,7 @@ The purpose of this pass is to modify the IR code to instert debug statements.
 One is inserted before each other statement in the IR.
 Rough pseudocode for a Debug statment:
 ```
-if should_break  # i.e. this_breakpoint_is_active
+if should_break  # i.e. this breakpoint is active
     variables = filter(isdefined, slots)
     call break_action(variables)  # launch the debugging REPL etc.
 end
@@ -13,7 +13,6 @@ end
 The reality is a bit more complicated, as you can't ask if a variable is defined
 before it is declared. But that is the principle.
 ==#
-
 
 
 """
@@ -26,7 +25,7 @@ Like `Cassette.insert_statements` but the `newstmts` function takes
      - in the `newst,ts` function `dest_i` should be used to calculate SSAValues and goto addresses
  - `src_i`: the index of the original IR statement that this will be replacing
      - You may wish to use this in the `newstmts` function if the code actually depends on which
-       statment number of original IR is being replaced.
+       statement number of original IR is being replaced.
 """
 function extended_insert_statements!(code, codelocs, stmtcount, newstmts)
     ssachangemap = fill(0, length(code))
@@ -75,7 +74,7 @@ end
 
 """
     call_expr(mod:Module, func::Symbol, args...)
-This function returns the IR exprression for calling the names function `func` from module `mod`, with the
+This function returns the IR expression for calling the names function `func` from module `mod`, with the
 given args. It is maked with `nooverdub` which will stop Cassette recursing into it.
 """
 call_expr(mod::Module, func::Symbol, args...) = Expr(:call, Expr(:nooverdub, GlobalRef(mod, func)), args...)
@@ -87,7 +86,7 @@ call_expr(mod::Module, func::Symbol, args...) = Expr(:call, Expr(:nooverdub, Glo
 This returns the IR code for a debug statement (as decribed at the top of this file).
 This basically means creating code that checks if we `should_break` at this statement,
 and if so works out what variable are defined, then passing those to the `break_action` call which will
-show the dubugging prompt.
+show the debugging prompt.
 
  - slotnames: the names of the slots from the CodeInfo
  - slot_created_on: a vector saying where the variables were declared (as returned by `created_on`
@@ -99,8 +98,8 @@ function enter_debug_statements(slotnames, slot_created_ons, method::Method, ind
     statements = [
         call_expr(MagneticReadHead, :should_break, Expr(:contextslot), method, orig_ind),
         Expr(:REPLACE_THIS_WITH_GOTOIFNOT_AT_END),
-        Expr(:call, Expr(:nooverdub, GlobalRef(Base, :getindex)), GlobalRef(Core, :Symbol)),
-        Expr(:call, Expr(:nooverdub, GlobalRef(Base, :getindex)), GlobalRef(Core, :Any)),
+        call_expr(Base, :getindex, GlobalRef(Core, :Symbol)),
+        call_expr(Base, :getindex, GlobalRef(Core, :Any)),
     ]
     stop_cond_ssa = Core.SSAValue(ind)
     # Skip the pplaceholder
