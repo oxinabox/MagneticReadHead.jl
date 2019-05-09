@@ -1,19 +1,22 @@
 Cassette.@context HandEvalCtx
 
 @enum SteppingMode StepIn StepNext StepContinue StepOut
-
+#==
 # On the way in
 @inline function child_stepping_mode!(ctx::HandEvalCtx)
     cur_mode = ctx.metadata.stepping_mode
     ctx.metadata.stepping_mode = cur_mode === StepIn ? StepNext : StepContinue
+    @show "c", cur_mode
 end
 
 # On the way out
 function parent_stepping_mode!(ctx::HandEvalCtx)
     cur_mode = ctx.metadata.stepping_mode
-    ctx.metadata.stepping_mode = cur_mode === StepContinue ? StepContinue : StepNext
-end
 
+    ctx.metadata.stepping_mode = cur_mode === StepContinue ? StepContinue : StepNext
+    @show "p", cur_mode
+end
+==#
 
 mutable struct HandEvalMeta
     eval_module::Module
@@ -46,17 +49,38 @@ function Cassette.overdub(ctx::HandEvalCtx, f, args...)
     # This is basically the epicenter of all the logic
     # We control the flow of stepping modes
     # and which methods are instrumented or not.
+    cur_mode = ctx.metadata.stepping_mode
+
     should_recurse =
-        ctx.metadata.stepping_mode === StepIn ||
+        cur_mode === StepIn ||
         should_instrument(ctx.metadata.breakpoint_rules, f)
 
     if should_recurse
         if Cassette.canrecurse(ctx, f, args...)
-            child_stepping_mode!(ctx)
+            # Determine stepping mode for child
+            ctx.metadata.stepping_mode = cur_mode === StepIn ? StepNext : StepContinue
+            # Both StepOut and StepContinue means child should StepContinue
             try
                 return Cassette.recurse(ctx, f, args...)
             finally
-                parent_stepping_mode!(ctx)
+                # Determine stepping mode for parent
+                child_instruction = ctx.metadata.stepping_mode
+                @show child_instruction, cur_mode
+                ctx.metadata.stepping_mode =
+                    child_instruction !== StepContinue ? StepNext :
+                        cur_mode === StepOut ?  StepOut :
+                        cur_mode === StepNext ?  StepNext : StepContinue
+
+                # if child said StepOut or StepNext or StepIn, then we shold break on next (StepNext)
+                # if the child said StepContinue,
+                    # if we were saying to StepIn can now StepContinue
+                        # as we have completed what ever work we were doing
+                    # if we were saying to StepContinue, then still want to continue
+                        # (unless we hit a breakpoint where the child gave new instructions)
+                    # But if we were StepOut then we still need to stepout til we return
+                        # (and it gets turnd into a StepNext)
+                    # and if we were StepNext then we made our child StepContinue,
+                    # but we want to go StepNext ourself so have to restore that
             end
         else
             @assert f isa Core.Builtin

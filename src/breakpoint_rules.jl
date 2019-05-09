@@ -3,7 +3,7 @@ struct Rule{V}
     statement_ind::Int
 end
 # No matter if a Function or a Method, default to break at start
-Rule(v) = Rule(v, 0)
+Rule(v) = Rule(v, 1)
 
 ##############################################################################
 # instrumenting rules
@@ -74,7 +74,8 @@ should be broken on.
 I.e. if this point in the code has a breakpoint set.
 """
 function should_breakon(rules::BreakpointRules, method, statement_ind)
-    return any(rules.breakon_rules) do rule
+    ret =  any(rules.breakon_rules) do rule
         match(rule, method, statement_ind)
     end
+    return ret
 end

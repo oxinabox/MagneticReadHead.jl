@@ -86,4 +86,5 @@ function break_action(ctx, meth, statement_ind, slotnames, slotvals)
     variables = LittleDict(slotnames, slotvals)
     code_word = iron_repl(metadata, meth, statement_ind, variables)
     actions[code_word].act(metadata)
+    @show ctx.metadata.stepping_mode
 end

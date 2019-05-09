@@ -19,4 +19,3 @@ test_files = (
         include(file)
     end
 end
-
