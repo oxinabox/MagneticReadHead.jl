@@ -1,22 +1,6 @@
 Cassette.@context HandEvalCtx
 
 @enum SteppingMode StepIn StepNext StepContinue StepOut
-#==
-# On the way in
-@inline function child_stepping_mode!(ctx::HandEvalCtx)
-    cur_mode = ctx.metadata.stepping_mode
-    ctx.metadata.stepping_mode = cur_mode === StepIn ? StepNext : StepContinue
-    @show "c", cur_mode
-end
-
-# On the way out
-function parent_stepping_mode!(ctx::HandEvalCtx)
-    cur_mode = ctx.metadata.stepping_mode
-
-    ctx.metadata.stepping_mode = cur_mode === StepContinue ? StepContinue : StepNext
-    @show "p", cur_mode
-end
-==#
 
 mutable struct HandEvalMeta
     eval_module::Module
@@ -65,11 +49,9 @@ function Cassette.overdub(ctx::HandEvalCtx, f, args...)
             finally
                 # Determine stepping mode for parent
                 child_instruction = ctx.metadata.stepping_mode
-                @show child_instruction, cur_mode
                 ctx.metadata.stepping_mode =
                     child_instruction !== StepContinue ? StepNext :
-                        cur_mode === StepOut ?  StepOut :
-                        cur_mode === StepNext ?  StepNext : StepContinue
+                        cur_mode === StepIn ? StepContinue : cur_mode
 
                 # if child said StepOut or StepNext or StepIn, then we shold break on next (StepNext)
                 # if the child said StepContinue,
@@ -83,7 +65,6 @@ function Cassette.overdub(ctx::HandEvalCtx, f, args...)
                     # but we want to go StepNext ourself so have to restore that
             end
         else
-            @assert f isa Core.Builtin
             #@warn "Not able to enter into method" f args
             return Cassette.fallback(ctx, f, args...)
         end

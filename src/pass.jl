@@ -94,7 +94,11 @@ show the debugging prompt.
  - ind: the actual index in the code IR this is being  inserted at. This is where the SSAValues start from
  - orig_ind: the index in the original code IR for where this is being inserted. (before other debug statements were inserted above)
 """
-function enter_debug_statements(slotnames, slot_created_ons, method::Method, ind::Int, orig_ind::Int)
+function enter_debug_statements(
+    slotnames, slot_created_ons, method::Method,
+    stmt, ind::Int, orig_ind::Int
+    )
+    
     statements = [
         call_expr(MagneticReadHead, :should_break, Expr(:contextslot), method, orig_ind),
         Expr(:REPLACE_THIS_WITH_GOTOIFNOT_AT_END),
@@ -129,6 +133,7 @@ function enter_debug_statements(slotnames, slot_created_ons, method::Method, ind
     )
     # We now know how many statements we added so can set how far we are going to jump in the inital condition.
     statements[2] = Expr(:gotoifnot, stop_cond_ssa, ind + length(statements))
+    push!(statements, stmt)  # last put im the original statement -- this is where we jump to
     return statements
 end
 
@@ -146,7 +151,7 @@ function enter_debug_statements_count(slot_created_ons, orig_ind)
             n_statements  += 4
         end
     end
-    n_statements += 1
+    n_statements += 2
     return n_statements
 end
 
@@ -161,18 +166,11 @@ function instrument!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflection)
     slot_created_ons = created_on(ir)
     extended_insert_statements!(
         ir.code, ir.codelocs,
-        (stmt, i) -> stmt isa Expr ?
-            enter_debug_statements_count(slot_created_ons, i) + 1
-            : nothing,
-        (stmt, i, orig_i) -> [
-                enter_debug_statements(
-                    ir.slotnames,
-                    slot_created_ons,
-                    reflection.method,
-                    i, orig_i
-                );
-                stmt
-            ]
+        (stmt, i) -> stmt isa Expr ? enter_debug_statements_count(slot_created_ons, i) : nothing,
+        (stmt, i, orig_i) -> enter_debug_statements(
+            ir.slotnames, slot_created_ons, reflection.method,
+            stmt, i, orig_i
+        );
     )
     return ir
 end
