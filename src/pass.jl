@@ -5,13 +5,11 @@ The purpose of this pass is to modify the IR code to instert debug statements.
 One is inserted before each other statement in the IR.
 Rough pseudocode for a Debug statment:
 ```
-if should_break  # i.e. this_breakpoint_is_active
-    variables = filter(isdefined, slots)
+if should_break(statement)  # i.e. this breakpoint is active
+    variables = Base.@locals()
     call break_action(variables)  # launch the debugging REPL etc.
 end
 ```
-The reality is a bit more complicated, as you can't ask if a variable is defined
-before it is declared. But that is the principle.
 ==#
 
 
@@ -58,22 +56,6 @@ function extended_insert_statements!(code, codelocs, stmtcount, newstmts)
 end
 
 """
-    created_on
-Given an `ir` returns a vector the same length as slotnames,
-which each entry is the ir statment index for where the coresponding variable was delcared
-"""
-function created_on(ir)
-    created_stmt_ind = zeros(length(ir.slotnames))  # default to assuming everything created before start
-    for (ii,stmt) in enumerate(ir.code)
-        if stmt isa Core.NewvarNode
-            @assert created_stmt_ind[stmt.slot.id] == 0
-            created_stmt_ind[stmt.slot.id] = ii
-        end
-    end
-    return created_stmt_ind
-end
-
-"""
     call_expr(mod:Module, func::Symbol, args...)
 This function returns the IR exprression for calling the names function `func` from module `mod`, with the
 given args. It is maked with `nooverdub` which will stop Cassette recursing into it.
@@ -82,73 +64,28 @@ call_expr(mod::Module, func::Symbol, args...) = Expr(:call, Expr(:nooverdub, Glo
 
 
 """
-    enter_debug_statements(slotnames, slot_created_ons, method::Method, ind::Int, orig_ind::Int)
+    enter_debug_statements(stmt, method::Method, ind::Int, orig_ind::Int)
 
 This returns the IR code for a debug statement (as decribed at the top of this file).
 This basically means creating code that checks if we `should_break` at this statement,
 and if so works out what variable are defined, then passing those to the `break_action` call which will
 show the dubugging prompt.
 
- - slotnames: the names of the slots from the CodeInfo
- - slot_created_on: a vector saying where the variables were declared (as returned by `created_on`
- - method: the method being instruments
+ - stmt: the original IR statement being debugged (i.e. the statement that will run after the debugger closes)
+ - method: the method being instrumented
  - ind: the actual index in the code IR this is being  inserted at. This is where the SSAValues start from
  - orig_ind: the index in the original code IR for where this is being inserted. (before other debug statements were inserted above)
 """
-function enter_debug_statements(slotnames, slot_created_ons, method::Method, ind::Int, orig_ind::Int)
-    statements = [
-        call_expr(MagneticReadHead, :should_break, Expr(:contextslot), method, orig_ind),
-        Expr(:REPLACE_THIS_WITH_GOTOIFNOT_AT_END),
-        Expr(:call, Expr(:nooverdub, GlobalRef(Base, :getindex)), GlobalRef(Core, :Symbol)),
-        Expr(:call, Expr(:nooverdub, GlobalRef(Base, :getindex)), GlobalRef(Core, :Any)),
+function enter_debug_statements(stmt, method::Method, ind::Int, orig_ind::Int)
+    return [
+        call_expr(MagneticReadHead, :should_break, Expr(:contextslot), method, orig_ind),  # ind
+        Expr(:gotoifnot, Core.SSAValue(ind), ind + 4), # ind + 1
+        Expr(:locals),  # ind + 2
+        call_expr( # ind + 3
+            MagneticReadHead, :break_action, Expr(:contextslot), method, orig_ind, Core.SSAValue(ind + 2)
+        ),
+        stmt, # ind + 4
     ]
-    stop_cond_ssa = Core.SSAValue(ind)
-    # Skip the pplaceholder
-    names_ssa = Core.SSAValue(ind + 2)
-    values_ssa = Core.SSAValue(ind + 3)
-    cur_ind = ind + 4
-    # Now we store all of the slots that have values assigned to them
-    for (slotind, (slotname, slot_created_on)) in enumerate(zip(slotnames, slot_created_ons))
-        orig_ind > slot_created_on || continue
-        slot = Core.SlotNumber(slotind)
-        append!(statements, (
-            Expr(:isdefined, slot),             # cur_ind
-            Expr(:gotoifnot, Core.SSAValue(cur_ind), cur_ind + 4),    # cur_ind + 1
-            call_expr(Base, :push!, names_ssa, QuoteNode(slotname)),  # cur_ind + 2
-            call_expr(Base, :push!, values_ssa, slot)   # cur_ind + 3
-        ))
-
-        cur_ind += 4
-    end
-
-    push!(statements, call_expr(
-        MagneticReadHead, :break_action,
-        Expr(:contextslot),
-        method,
-        orig_ind,
-        names_ssa, values_ssa)
-    )
-    # We now know how many statements we added so can set how far we are going to jump in the inital condition.
-    statements[2] = Expr(:gotoifnot, stop_cond_ssa, ind + length(statements))
-    return statements
-end
-
-"""
-    enter_debug_statements_count(slot_created_ons, orig_ind)
-returns the length of the corresponding `enter_debug_statements` call.
-"""
-function enter_debug_statements_count(slot_created_ons, orig_ind)
-    # this function intentionally mirrors structure of enter_debug_statements
-    # for ease of updating to match it
-    n_statements = 4
-
-    for slot_created_on in slot_created_ons
-        if orig_ind > slot_created_on
-            n_statements  += 4
-        end
-    end
-    n_statements += 1
-    return n_statements
 end
 
 """
@@ -159,21 +96,10 @@ it is the main method of this file, and calls all the ones defined earlier.
 function instrument!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflection)
     ir = reflection.code_info
 
-    slot_created_ons = created_on(ir)
     extended_insert_statements!(
         ir.code, ir.codelocs,
-        (stmt, i) -> stmt isa Expr ?
-            enter_debug_statements_count(slot_created_ons, i) + 1
-            : nothing,
-        (stmt, i, orig_i) -> [
-                enter_debug_statements(
-                    ir.slotnames,
-                    slot_created_ons,
-                    reflection.method,
-                    i, orig_i
-                );
-                stmt
-            ]
+        (stmt, i) -> stmt isa Expr ? 5 : nothing,
+        (stmt, i, orig_i) -> enter_debug_statements(stmt, reflection.method, i, orig_i),
     )
     return ir
 end

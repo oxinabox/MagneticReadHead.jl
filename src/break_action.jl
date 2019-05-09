@@ -80,10 +80,8 @@ end
 
 What to do when a breakpoint is hit
 """
-function break_action(ctx, meth, statement_ind, slotnames, slotvals)
+function break_action(ctx, meth, statement_ind, variables)
     metadata = ctx.metadata
-    # TODO we probably need to drop the first few slots as they will contain various metadata
-    variables = LittleDict(slotnames, slotvals)
     code_word = iron_repl(metadata, meth, statement_ind, variables)
     actions[code_word].act(metadata)
 end
