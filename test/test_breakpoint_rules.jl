@@ -8,28 +8,28 @@ using Test
     @testset "module" begin
         # I don't really think this is useful, but it does work
         rules = borule(Iterators)
-        @test should_breakon(rules, first(methods(Iterators.drop)), 0)
-        @test !should_breakon(rules, first(methods(Iterators.drop)), 2)
-        @test should_breakon(rules, first(methods(Iterators.flatten)), 0)
-        @test !should_breakon(borule(Iterators), first(methods(Iterators.flatten)), 1)
+        @test should_breakon(rules, first(methods(Iterators.drop)), 1)
+        @test !should_breakon(rules, first(methods(Iterators.drop)), 3)
+        @test should_breakon(rules, first(methods(Iterators.flatten)), 1)
+        @test !should_breakon(borule(Iterators), first(methods(Iterators.flatten)), 2)
     end
 
     @testset "Function" begin
         rules = borule(eps)
         for meth in methods(eps)
-            @test should_breakon(rules, meth, 0)
-            @test !should_breakon(rules, meth, 1)
+            @test should_breakon(rules, meth, 1)
             @test !should_breakon(rules, meth, 2)
+            @test !should_breakon(rules, meth, 3)
         end
     end
 
     @testset "Method" begin
         meths  = collect(methods(pwd))
         rules = borule(meths[1])
-        @test should_breakon(rules, meths[1], 0)
-        @test !should_breakon(rules, meths[1], 1)
+        @test should_breakon(rules, meths[1], 1)
+        @test !should_breakon(rules, meths[1], 2)
         for meth in meths[2:end]
-            @test !should_breakon(rules, meth, 0)
+            @test !should_breakon(rules, meth, 1)
         end
     end
 
@@ -38,15 +38,15 @@ using Test
         # This is the one that matters, method + statement number
         # is what a line number breakpoint will become
         meths  = collect(methods(pwd))
-        rules = borule(meths[1], 2)
-        @test !should_breakon(rules, meths[1], 0)
+        rules = borule(meths[1], 3)
         @test !should_breakon(rules, meths[1], 1)
-        @test should_breakon(rules, meths[1], 2)
-        @test !should_breakon(rules, meths[1], 3)
+        @test !should_breakon(rules, meths[1], 2)
+        @test should_breakon(rules, meths[1], 3)
+        @test !should_breakon(rules, meths[1], 4)
 
         for meth in meths[2:end]
-            @test !should_breakon(rules, meth, 0)
-            @test !should_breakon(rules, meth, 2)
+            @test !should_breakon(rules, meth, 1)
+            @test !should_breakon(rules, meth, 3)
         end
     end
 end
@@ -60,13 +60,13 @@ end
     @test should_instrument(rules, Iterators.flatten)
     @test should_instrument(rules, Iterators.drop)
 
-    @test !should_breakon(rules, first(methods(+)), 0)
-    @test !should_breakon(rules, first(methods(+)), 2)
-    @test !should_breakon(rules, first(methods(sum)), 0)
-    @test !should_breakon(rules, first(methods(sum)), 3)
-    @test !should_breakon(rules, first(methods(Iterators.flatten)), 0)
-    @test !should_breakon(rules, first(methods(Iterators.flatten)), 4)
-    @test !should_breakon(rules, first(methods(Iterators.drop)), 0)
+    @test !should_breakon(rules, first(methods(+)), 1)
+    @test !should_breakon(rules, first(methods(+)), 3)
+    @test !should_breakon(rules, first(methods(sum)), 1)
+    @test !should_breakon(rules, first(methods(sum)), 4)
+    @test !should_breakon(rules, first(methods(Iterators.flatten)), 1)
+    @test !should_breakon(rules, first(methods(Iterators.flatten)), 5)
+    @test !should_breakon(rules, first(methods(Iterators.drop)), 1)
     @test !should_breakon(rules, first(methods(Iterators.drop)), 5)
 end
 
@@ -81,13 +81,13 @@ end
     @test !should_instrument(rules, Iterators.drop)
 
 
-    @test !should_breakon(rules, first(methods(+)), 0)
-    @test !should_breakon(rules, first(methods(+)), 2)
-    @test !should_breakon(rules, first(methods(sum)), 0)
-    @test !should_breakon(rules, first(methods(sum)), 3)
-    @test !should_breakon(rules, first(methods(Iterators.flatten)), 0)
-    @test !should_breakon(rules, first(methods(Iterators.flatten)), 4)
-    @test !should_breakon(rules, first(methods(Iterators.drop)), 0)
+    @test !should_breakon(rules, first(methods(+)), 1)
+    @test !should_breakon(rules, first(methods(+)), 3)
+    @test !should_breakon(rules, first(methods(sum)), 1)
+    @test !should_breakon(rules, first(methods(sum)), 4)
+    @test !should_breakon(rules, first(methods(Iterators.flatten)), 1)
+    @test !should_breakon(rules, first(methods(Iterators.flatten)), 5)
+    @test !should_breakon(rules, first(methods(Iterators.drop)), 1)
     @test !should_breakon(rules, first(methods(Iterators.drop)), 5)
 end
 
@@ -103,13 +103,13 @@ end
     @test should_instrument(rules, Iterators.flatten)
     @test should_instrument(rules, Iterators.drop)
 
-    @test !should_breakon(rules, first(methods(+)), 0)
-    @test !should_breakon(rules, first(methods(+)), 2)
-    @test !should_breakon(rules, first(methods(sum)), 0)
-    @test !should_breakon(rules, first(methods(sum)), 3)
-    @test !should_breakon(rules, first(methods(Iterators.flatten)), 0)
-    @test !should_breakon(rules, first(methods(Iterators.flatten)), 4)
-    @test !should_breakon(rules, first(methods(Iterators.drop)), 0)
+    @test !should_breakon(rules, first(methods(+)), 1)
+    @test !should_breakon(rules, first(methods(+)), 3)
+    @test !should_breakon(rules, first(methods(sum)), 1)
+    @test !should_breakon(rules, first(methods(sum)), 4)
+    @test !should_breakon(rules, first(methods(Iterators.flatten)), 1)
+    @test !should_breakon(rules, first(methods(Iterators.flatten)), 5)
+    @test !should_breakon(rules, first(methods(Iterators.drop)), 1)
     @test !should_breakon(rules, first(methods(Iterators.drop)), 5)
 end
 
@@ -123,12 +123,12 @@ end
     @test !should_instrument(rules, Iterators.flatten)
     @test should_instrument(rules, Iterators.drop)
 
-    @test !should_breakon(rules, first(methods(+)), 0)
-    @test !should_breakon(rules, first(methods(+)), 2)
-    @test !should_breakon(rules, first(methods(sum)), 0)
-    @test !should_breakon(rules, first(methods(sum)), 3)
-    @test !should_breakon(rules, first(methods(Iterators.flatten)), 0)
-    @test !should_breakon(rules, first(methods(Iterators.flatten)), 4)
-    @test should_breakon(rules, first(methods(Iterators.drop)), 0)
+    @test !should_breakon(rules, first(methods(+)), 1)
+    @test !should_breakon(rules, first(methods(+)), 3)
+    @test !should_breakon(rules, first(methods(sum)), 1)
+    @test !should_breakon(rules, first(methods(sum)), 4)
+    @test !should_breakon(rules, first(methods(Iterators.flatten)), 1)
+    @test !should_breakon(rules, first(methods(Iterators.flatten)), 5)
+    @test should_breakon(rules, first(methods(Iterators.drop)), 1)
     @test !should_breakon(rules, first(methods(Iterators.drop)), 5)
 end
