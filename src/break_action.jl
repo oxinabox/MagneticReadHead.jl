@@ -29,11 +29,11 @@ end
 function breadcrumbs(io, file::AbstractString, line_num; nbefore=2, nafter=2)
    @assert(nbefore >= 0)
    @assert(nafter >= 0)
-   
+
    all_lines = loc_for_file(file)
    first_line_num = max(1, line_num - nbefore)
    last_line_num = min(length(all_lines), line_num + nafter)
-   
+
    for ln in first_line_num:last_line_num
       line = all_lines[ln]
       if ln == line_num
@@ -52,36 +52,40 @@ end
 
 
 # this function exists only for mocking so we can test it.
-breakpoint_hit(meth, statement_ind) = nothing
+breakpoint_hit(meth, statement_ind, variables) = nothing
 
-function iron_repl(metadata::HandEvalMeta, meth, statement_ind)
-    breakpoint_hit(meth, statement_ind)
+function iron_repl(metadata::HandEvalMeta, meth, statement_ind, variables)
     breadcrumbs(meth, statement_ind)
-    
+
     printstyled("Vars: "; color=:light_yellow)
-    println(join(keys(metadata.variables), ", "))
+    println(join(keys(variables), ", "))
     print_commands()
-    
-    run_repl(metadata.variables, metadata.eval_module)
+
+    run_repl(variables, metadata.eval_module)
+end
+
+"""
+    should_break
+Determines if we should actualy break at a potential breakpoint
+"""
+function should_break(ctx, meth, statement_ind)
+    return ctx.metadata.stepping_mode === StepNext ||
+        should_breakon(ctx.metadata.breakpoint_rules, meth, statement_ind)
 end
 
 
 """
-    break_action(metadata, meth, statement_ind)
+    break_action
 
-This determines what we should do when we hit a potential point to break at.
-We check if we should actually break here,
-and if so open up a REPL.
-if not, then we continue.
+What to do when a breakpoint is hit
 """
-function break_action(metadata, meth, statement_ind)
-    if !(metadata.stepping_mode === StepNext
-         || should_breakon(metadata.breakpoint_rules, meth, statement_ind)
-        )
-        # Only break on StepNext and actual breakpoints
-        return
-    end
+function break_action(ctx, meth, statement_ind, slotnames, slotvals)
+    metadata = ctx.metadata
 
-    code_word = iron_repl(metadata, meth, statement_ind)
+    variables = LittleDict(slotnames, slotvals)
+    pop!(variables, Symbol("#self#"))
+    breakpoint_hit(meth, statement_ind, variables)
+
+    code_word = iron_repl(metadata, meth, statement_ind, variables)
     actions[code_word].act(metadata)
 end

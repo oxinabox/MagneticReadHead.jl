@@ -1,150 +1,178 @@
-# For ease of editting we have this here
-# It should be set to just redistpatch
-function handeval_break_action(metadata, meth, stmt_number)
-    break_action(metadata, meth, stmt_number)
+#==
+Instumenting Debugger Pass:
+
+The purpose of this pass is to modify the IR code to instert debug statements.
+One is inserted before each other statement in the IR.
+Rough pseudocode for a Debug statment:
+```
+if should_break  # i.e. this breakpoint is active
+    variables = filter(isdefined, slots)
+    call break_action(variables)  # launch the debugging REPL etc.
 end
+```
+The reality is a bit more complicated, as you can't ask if a variable is defined
+before it is declared. But that is the principle.
+==#
 
 
-slotname(ir::Core.CodeInfo, slotnum::Integer) = ir.slotnames[slotnum]
-slotname(ir::Core.CodeInfo, slotnum) = slotname(ir, slotnum.id)
+"""
+    extended_insert_statements!(code, codelocs, stmtcount, newstmts)
 
-# inserts insert `ctx.metadata[:x] = x`
-function record_slot_value(ir, variable_record_slot, slotnum)
-    name = slotname(ir, slotnum)
-    return Expr(
-        :call,
-        Expr(:nooverdub, GlobalRef(Base, :setindex!)),
-        variable_record_slot,
-        slotnum,
-        QuoteNode(name)
-    )
-end
-
-# What we want to do is:
-# After every assigment: `x = foo`, insert `ctx.metadata[:x] = x`
-function instrument_assignments!(ir, variable_record_slot)
-    is_assignment(stmt) = Base.Meta.isexpr(stmt, :(=))
-    stmtcount(stmt, i) = is_assignment(stmt) ? 2 : nothing
-    function newstmts(stmt, i)
-        lhs = stmt.args[1]
-        record = record_slot_value(ir, variable_record_slot, lhs)
-        return [stmt, record]
+Like `Cassette.insert_statements` but the `newstmts` function takes
+3 arguments:
+ - `statement`: the IR statement it will be replacing
+ - `dest_i`: the first index that this will be inserted into, after renumbering to insert prior replacements.
+     - in the `newst,ts` function `dest_i` should be used to calculate SSAValues and goto addresses
+ - `src_i`: the index of the original IR statement that this will be replacing
+     - You may wish to use this in the `newstmts` function if the code actually depends on which
+       statement number of original IR is being replaced.
+"""
+function extended_insert_statements!(code, codelocs, stmtcount, newstmts)
+    ssachangemap = fill(0, length(code))
+    labelchangemap = fill(0, length(code))
+    worklist = Tuple{Int,Int}[]
+    for i in 1:length(code)
+        stmt = code[i]
+        nstmts = stmtcount(stmt, i)
+        if nstmts !== nothing
+            addedstmts = nstmts - 1
+            push!(worklist, (i, addedstmts))
+            ssachangemap[i] = addedstmts
+            if i < length(code)
+                labelchangemap[i + 1] = addedstmts
+            end
+        end
     end
-    Cassette.insert_statements!(ir.code, ir.codelocs, stmtcount, newstmts)
+    Core.Compiler.renumber_ir_elements!(code, ssachangemap, labelchangemap)
+    for (src_i, addedstmts) in worklist
+        dest_i = src_i + ssachangemap[src_i] - addedstmts # correct the index for accumulated offsets
+        stmts = newstmts(code[dest_i], dest_i, src_i)
+        @assert(length(stmts) == (addedstmts + 1), "$(length(stmts)) == $(addedstmts + 1)")
+        code[dest_i] = stmts[end]
+        for j in 1:(length(stmts) - 1) # insert in reverse to maintain the provided ordering
+            insert!(code, dest_i, stmts[end - j])
+            insert!(codelocs, dest_i, codelocs[dest_i])
+        end
+    end
 end
 
-function instrument_arguments!(ir, method, variable_record_slot)
-    # start from 2 to skip #self
-    arg_names = Base.method_argnames(method)[2:end]
-    arg_slots = 1 .+ (1:length(arg_names))
-    @assert(
-        ir.slotnames[arg_slots] == arg_names,
-        "$(ir.slotnames[arg_slots]) != $(arg_names)"
+"""
+    created_on
+Given an `ir` returns a vector the same length as slotnames,
+which each entry is the ir statment index for where the coresponding variable was delcared
+"""
+function created_on(ir)
+    created_stmt_ind = zeros(length(ir.slotnames))  # default to assuming everything created before start
+    for (ii,stmt) in enumerate(ir.code)
+        if stmt isa Core.NewvarNode
+            @assert created_stmt_ind[stmt.slot.id] == 0
+            created_stmt_ind[stmt.slot.id] = ii
+        end
+    end
+    return created_stmt_ind
+end
+
+"""
+    call_expr(mod:Module, func::Symbol, args...)
+This function returns the IR expression for calling the names function `func` from module `mod`, with the
+given args. It is maked with `nooverdub` which will stop Cassette recursing into it.
+"""
+call_expr(mod::Module, func::Symbol, args...) = Expr(:call, Expr(:nooverdub, GlobalRef(mod, func)), args...)
+
+
+"""
+    enter_debug_statements(slotnames, slot_created_ons, method::Method, ind::Int, orig_ind::Int)
+
+This returns the IR code for a debug statement (as decribed at the top of this file).
+This basically means creating code that checks if we `should_break` at this statement,
+and if so works out what variable are defined, then passing those to the `break_action` call which will
+show the debugging prompt.
+
+ - slotnames: the names of the slots from the CodeInfo
+ - slot_created_on: a vector saying where the variables were declared (as returned by `created_on`
+ - method: the method being instruments
+ - ind: the actual index in the code IR this is being  inserted at. This is where the SSAValues start from
+ - orig_ind: the index in the original code IR for where this is being inserted. (before other debug statements were inserted above)
+"""
+function enter_debug_statements(
+    slotnames, slot_created_ons, method::Method,
+    stmt, ind::Int, orig_ind::Int
     )
-
-    Cassette.insert_statements!(
-        ir.code, ir.codelocs,
-        (stmt, i) -> i == 1 ? length(arg_slots) + 1 : nothing,
-
-        (stmt, i) -> [
-            map(arg_slots) do slotnum
-                slot = Core.SlotNumber(slotnum)
-                record_slot_value(ir, variable_record_slot, slot)
-            end;
-            stmt
-        ]
-    )
-end
-
-"""
-     create_slot!(ir, namebase="")
-Adds a slot to the IR with a name based on `namebase`.
-It will be added at the end
-returns the new slot number
-"""
-function create_slot!(ir, namebase="")
-    slot_name = gensym(namebase)
-    push!(ir.slotnames, slot_name)
-    push!(ir.slotflags, 0x00)
-    slot = Core.SlotNumber(length(ir.slotnames))
-    return slot
-end
-
-"""
-    setup_metadata_slots!(ir, metadata_slot, variable_record_slot)
-
-Attaches the cassette metadata object and it's variable field to the slot given.
-This will be added as the very first statement to the ir.
-"""
-function setup_metadata_slots!(ir, metadata_slot, variable_record_slot)
+    
     statements = [
-        # Get Cassette to fill in the MetaData slot
-        Expr(:(=), metadata_slot, Expr(
-            :call,
-            Expr(:nooverdub, GlobalRef(Core, :getfield)),
-            Expr(:contextslot),
-            QuoteNode(:metadata)
-        )),
-
-        # Extract it's variables dict field
-        Expr(:(=), variable_record_slot, Expr(
-            :call,
-            Expr(:nooverdub, GlobalRef(Core, :getfield)),
-            metadata_slot,
-            QuoteNode(:variables)
-        ))
+        call_expr(MagneticReadHead, :should_break, Expr(:contextslot), method, orig_ind),
+        Expr(:REPLACE_THIS_WITH_GOTOIFNOT_AT_END),
+        call_expr(Base, :getindex, GlobalRef(Core, :Symbol)),
+        call_expr(Base, :getindex, GlobalRef(Core, :Any)),
     ]
+    stop_cond_ssa = Core.SSAValue(ind)
+    # Skip the pplaceholder
+    names_ssa = Core.SSAValue(ind + 2)
+    values_ssa = Core.SSAValue(ind + 3)
+    cur_ind = ind + 4
+    # Now we store all of the slots that have values assigned to them
+    for (slotind, (slotname, slot_created_on)) in enumerate(zip(slotnames, slot_created_ons))
+        orig_ind > slot_created_on || continue
+        slot = Core.SlotNumber(slotind)
+        append!(statements, (
+            Expr(:isdefined, slot),             # cur_ind
+            Expr(:gotoifnot, Core.SSAValue(cur_ind), cur_ind + 4),    # cur_ind + 1
+            call_expr(Base, :push!, names_ssa, QuoteNode(slotname)),  # cur_ind + 2
+            call_expr(Base, :push!, values_ssa, slot)   # cur_ind + 3
+        ))
 
-    Cassette.insert_statements!(
-        ir.code, ir.codelocs,
-        (stmt, i) -> i == 1 ? length(statements) + 1 : nothing,
-        (stmt, i) -> [statements; stmt]
+        cur_ind += 4
+    end
+
+    push!(statements, call_expr(
+        MagneticReadHead, :break_action,
+        Expr(:contextslot),
+        method,
+        orig_ind,
+        names_ssa, values_ssa)
     )
+    # We now know how many statements we added so can set how far we are going to jump in the inital condition.
+    statements[2] = Expr(:gotoifnot, stop_cond_ssa, ind + length(statements))
+    push!(statements, stmt)  # last put im the original statement -- this is where we jump to
+    return statements
 end
 
 """
-    insert_break_actions!(ir, metadata_slot)
-
-Add calls to the break action between every statement.
+    enter_debug_statements_count(slot_created_ons, orig_ind)
+returns the length of the corresponding `enter_debug_statements` call.
 """
-function insert_break_actions!(reflection, metadata_slot)
-    ir = reflection.code_info
-    break_state(i) = Expr(:call,
-        Expr(:nooverdub, GlobalRef(MagneticReadHead, :handeval_break_action)),
-        metadata_slot,
-        reflection.method,
-        i
-    )
-    
-    Cassette.insert_statements!(
-        ir.code, ir.codelocs,
-        (stmt, i) -> 2,
-        (stmt, i) -> [break_state(i-1); stmt]
-    )
+function enter_debug_statements_count(slot_created_ons, orig_ind)
+    # this function intentionally mirrors structure of enter_debug_statements
+    # for ease of updating to match it
+    n_statements = 4
+
+    for slot_created_on in slot_created_ons
+        if orig_ind > slot_created_on
+            n_statements  += 4
+        end
+    end
+    n_statements += 2
+    return n_statements
 end
 
-function instrument_handeval!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflection)
+"""
+    instrument!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflection)
+This is the transform for the debugger cassette pass.
+it is the main method of this file, and calls all the ones defined earlier.
+"""
+function instrument!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflection)
     ir = reflection.code_info
-    # Create slots to store metadata and it's variable record field
-    # put them a the end.
-    metadata_slot = create_slot!(ir, "metadata")
-    variable_record_slot = create_slot!(ir, "variable_record")
 
-    insert_break_actions!(reflection, metadata_slot)
-
-    # Now the real part where we determine about assigments
-    instrument_assignments!(ir, variable_record_slot)
-    
-    # record all the initial values so we get the parameters
-    instrument_arguments!(ir, reflection.method, variable_record_slot)
-
-    # insert the initial metadata and variable record slot
-    # assignments into the IR.
-    # Do this last so it doesn't get caught in our assignment catching
-    setup_metadata_slots!(ir, metadata_slot, variable_record_slot)
-    
+    slot_created_ons = created_on(ir)
+    extended_insert_statements!(
+        ir.code, ir.codelocs,
+        (stmt, i) -> stmt isa Expr ? enter_debug_statements_count(slot_created_ons, i) : nothing,
+        (stmt, i, orig_i) -> enter_debug_statements(
+            ir.slotnames, slot_created_ons, reflection.method,
+            stmt, i, orig_i
+        );
+    )
     return ir
 end
 
-
-const handeval_pass = Cassette.@pass instrument_handeval!
+const handeval_pass = Cassette.@pass instrument!

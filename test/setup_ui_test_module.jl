@@ -34,18 +34,19 @@ end
 """
     make_recording_breakpoint_hit_patch()
 
-Patchs the `breakpoint_hit(meth, statement_ind)` method in MagneticReadHead
+Patchs the `breakpoint_hit(meth, statement_ind, variables)` method in MagneticReadHead
 so that it will record what breakpoints were hit.
 this function returns a reference to that record `Vector`.
 """
 function make_recording_breakpoint_hit_patch()
     record = []
-    @eval MagneticReadHead function breakpoint_hit(meth, statement_ind)
-        push!($record,
-            (f=MagneticReadHead.functiontypeof(meth).instance,
-             method=meth,
-             statement_ind=statement_ind)
-        )
+    @eval MagneticReadHead function breakpoint_hit(meth, statement_ind, variables)
+        push!($record, (
+            f=MagneticReadHead.functiontypeof(meth).instance,
+            method=meth,
+            statement_ind=statement_ind,
+            variables=variables
+        ))
     end
     return record
 end

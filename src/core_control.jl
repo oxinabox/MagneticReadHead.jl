@@ -2,33 +2,17 @@ Cassette.@context HandEvalCtx
 
 @enum SteppingMode StepIn StepNext StepContinue StepOut
 
-
-# On the way in
-@inline function child_stepping_mode!(ctx::HandEvalCtx)
-    cur_mode = ctx.metadata.stepping_mode
-    ctx.metadata.stepping_mode = cur_mode === StepIn ? StepNext : StepContinue
-end
-
-# On the way out
-@inline function parent_stepping_mode!(ctx::HandEvalCtx)
-    cur_mode = ctx.metadata.stepping_mode
-    ctx.metadata.stepping_mode = cur_mode === StepContinue ? StepContinue : StepNext
-end
-
-
 mutable struct HandEvalMeta
-    variables::LittleDict{Symbol, Any}
     eval_module::Module
     stepping_mode::SteppingMode
     breakpoint_rules::BreakpointRules
 end
 
-# TODO: Workout how we are actually going to do this in a nonglobal way
+# TODO: Workout how and if we are actually going to do this in a nonglobal way
 const GLOBAL_BREAKPOINT_RULES = BreakpointRules()
 
 function HandEvalMeta(eval_module, stepping_mode)
     return HandEvalMeta(
-        LittleDict{Symbol,Any}(),
         eval_module,
         stepping_mode,
         GLOBAL_BREAKPOINT_RULES
@@ -49,23 +33,38 @@ function Cassette.overdub(ctx::HandEvalCtx, f, args...)
     # This is basically the epicenter of all the logic
     # We control the flow of stepping modes
     # and which methods are instrumented or not.
+    cur_mode = ctx.metadata.stepping_mode
+
     should_recurse =
-        ctx.metadata.stepping_mode === StepIn ||
+        cur_mode === StepIn ||
         should_instrument(ctx.metadata.breakpoint_rules, f)
 
     if should_recurse
         if Cassette.canrecurse(ctx, f, args...)
-            child_stepping_mode!(ctx)
-            cur_variables = ctx.metadata.variables  # store these for after the call
-            ctx.metadata.variables = LittleDict{Symbol, Any}()
+            # Both StepOut and StepContinue means child should StepContinue
+            ctx.metadata.stepping_mode = cur_mode === StepIn ? StepNext : StepContinue
+            # Determine stepping mode for child
             try
                 return Cassette.recurse(ctx, f, args...)
             finally
-                parent_stepping_mode!(ctx)
-                ctx.metadata.variables = cur_variables  # restore them
+                # Determine stepping mode for parent
+                child_instruction = ctx.metadata.stepping_mode
+                ctx.metadata.stepping_mode =
+                    child_instruction !== StepContinue ? StepNext :
+                        cur_mode === StepIn ? StepContinue : cur_mode
+
+                # if child said StepOut or StepNext or StepIn, then we shold break on next (StepNext)
+                # if the child said StepContinue,
+                    # if we were saying to StepIn can now StepContinue
+                        # as we have completed what ever work we were doing
+                    # if we were saying to StepContinue, then still want to continue
+                        # (unless we hit a breakpoint where the child gave new instructions)
+                    # But if we were StepOut then we still need to stepout til we return
+                        # (and it gets turnd into a StepNext)
+                    # and if we were StepNext then we made our child StepContinue,
+                    # but we want to go StepNext ourself so have to restore that
             end
         else
-            #@assert f isa Core.Builtin
             #@warn "Not able to enter into method" f args
             return Cassette.fallback(ctx, f, args...)
         end
