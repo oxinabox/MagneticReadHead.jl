@@ -6,9 +6,10 @@
 
 # Commands
 
-`@iron_debug foo()`: run `foo()` inside the debugger.
+`@run foo()`: run `foo()` inside the debugger.
 When a breakpoint is hit, then you will be given an Iron REPL to work with-in,
 allowing you to view/manipulate the arguments.
+`@enter foo()` performs similarly, after immediately breaking on the first line.
 
 Within this you can read (and write) variables,
  - Step-Next: to move to the next IR statement
@@ -21,12 +22,12 @@ Within this you can read (and write) variables,
 
  - `set_breakpoint!([function|method])`: Set a breakpoint on call to the argument
  - `set_breakpoint!(filename, line number)`: Set a breakpoint on the given line in the given function
- - `set_nodebug!([function|module])`: Disable debugging in the given function/module
+ - `set_uninstrumented!([function|module])`: Disable debugging in the given function/module
     - Not having debugging enabled for modules/functions you do not need to debug massively speeds up the running of your program.
     - However, debugging is fully disabled for those modules/functions, so if those functions would then call functions you do want to debug (say by using `map`) then that will also not be caught by the debugger.
- - `list_breakpoints()`, `list_nodebugs()`: list all the breakpoints/nodebugs
- - `rm_breakpoint!(arg...)`, `rm_nodebug!(args...)`: remove breakpoints/nodebugs. Takes same arguments as `set_...`.
- - `clear_breakpoints!()`, `clear_nodebugs!()`: remove all breakpoints/nodebugs.
+ - `list_breakpoints()`, `list_uninstrumenteds()`: list all the breakpoints/uninstrumenteds
+ - `rm_breakpoint!(arg...)`, `rm_uninstrumented!(args...)`: remove breakpoints/uninstrumenteds. Takes same arguments as `set_...`.
+ - `clear_breakpoints!()`, `clear_uninstrumenteds!()`: remove all breakpoints/uninstrumenteds.
 
 
 [![asciicast](https://asciinema.org/a/DxgPaaLQQYVV5xXCMuwF5Aa36.svg)](https://asciinema.org/a/DxgPaaLQQYVV5xXCMuwF5Aa36)

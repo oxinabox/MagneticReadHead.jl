@@ -10,9 +10,9 @@ end
 
 @testset "Should not block throwing errors" begin
     foo() = throw(DemoException())
-    @test_throws(DemoException, (@iron_debug foo()))
+    @test_throws(DemoException, (@run foo()))
     
     
     bar() = map(_->foo(), 1:10)
-    @test_throws(DemoException, (@iron_debug foo()))
+    @test_throws(DemoException, (@run bar()))
 end

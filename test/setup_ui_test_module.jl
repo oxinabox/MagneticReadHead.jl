@@ -60,7 +60,7 @@ function reset_patched_functions!()
     @eval MagneticReadHead function breakpoint_hit(meth, statement_ind)
         return nothing
     end
-    
+
     @eval MagneticReadHead function better_readline(io)
         # This is not technically the same as the better_readline defined in utils
         # but we will only be doing automated tests so that doesn't matter.
