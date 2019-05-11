@@ -52,10 +52,9 @@ end
 
 
 # this function exists only for mocking so we can test it.
-breakpoint_hit(meth, statement_ind) = nothing
+breakpoint_hit(meth, statement_ind, variables) = nothing
 
 function iron_repl(metadata::HandEvalMeta, meth, statement_ind, variables)
-    breakpoint_hit(meth, statement_ind)
     breadcrumbs(meth, statement_ind)
 
     printstyled("Vars: "; color=:light_yellow)
@@ -82,9 +81,11 @@ What to do when a breakpoint is hit
 """
 function break_action(ctx, meth, statement_ind, slotnames, slotvals)
     metadata = ctx.metadata
-    # TODO we probably need to drop the first few slots as they will contain various metadata
+
     variables = LittleDict(slotnames, slotvals)
+    pop!(variables, Symbol("#self#"))
+    breakpoint_hit(meth, statement_ind, variables)
+
     code_word = iron_repl(metadata, meth, statement_ind, variables)
     actions[code_word].act(metadata)
-    @show ctx.metadata.stepping_mode
 end

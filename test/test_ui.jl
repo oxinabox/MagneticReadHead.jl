@@ -107,6 +107,28 @@ clear_breakpoints!(); clear_nodebugs!()
     @test nothing==@iron_debug eg1()
 #end
 
+########################################
+# Variables
+function var_demo1(x)
+    local y
+    z=2x
+    y=z
+    z=1
+end
+
+clear_breakpoints!(); clear_nodebugs!()
+#@testset "Variables stepping" begin
+    set_breakpoint!(var_demo1)
+    make_readline_patch(["SN", "SN", "SN", "CC"])
+    record = make_recording_breakpoint_hit_patch()
+    @iron_debug var_demo1(5)
+
+    @test record[1].variables == LittleDict(:x=>5)
+    @test record[2].variables == LittleDict(:x=>5, :z=>10)
+    @test record[3].variables == LittleDict(:x=>5, :z=>10, :y=>10)
+    @test record[4].variables == LittleDict(:x=>5, :y=>10, :z=>1)
+#end
+
 #######
 # Done
 reset_patched_functions!()
