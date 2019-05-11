@@ -55,7 +55,7 @@ end
 Begin debugging and break on the start of the_code.
 """
 macro enter(body)
-    :(iron_debug(()->$(esc(body)), $(__module__), StepContinue))
+    :(iron_debug(()->$(esc(body)), $(__module__), StepNext))
 end
 
 end # module
