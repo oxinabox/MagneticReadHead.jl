@@ -58,15 +58,35 @@ end
 
 """
     created_on
-Given an `ir` returns a vector the same length as slotnames,
+Given an `Cassette.Reflection` returns a vector the same length as slotnames,
 which each entry is the ir statment index for where the coresponding variable was delcared
 """
-function created_on(ir)
-    created_stmt_ind = zeros(length(ir.slotnames))  # default to assuming everything created before start
-    for (ii,stmt) in enumerate(ir.code)
-        if stmt isa Core.NewvarNode
-            @assert created_stmt_ind[stmt.slot.id] == 0
-            created_stmt_ind[stmt.slot.id] = ii
+function created_on(reflection)
+    # This is a simplification of
+    # https://github.com/JuliaLang/julia/blob/236df47251c203c71abd0604f2f19bf1f9c639fd/base/compiler/ssair/slot2ssa.jl#L47
+    
+    ir = reflection.code_info
+    created_stmt_ind = fill(typemax(Int), length(ir.slotnames))
+    
+    # #self# and all the arguments are created at start
+    nargs = reflection.method.nargs
+    if nargs > length(created_stmt_ind)
+        @show reflection.method
+        @show nargs
+        @show ir.slotnames
+        error("More arguments than slots")
+    end
+    for id in 1 : nargs
+        created_stmt_ind[id] = 0
+    end
+    
+    # Scan for assignments or for `Core.NewvarNode`s
+    for (ii, stmt) in enumerate(ir.code)
+        if isexpr(stmt, :(=)) && stmt.args[1] isa Core.SlotNumber
+            id = stmt.args[1].id
+            if created_stmt_ind[id] == typemax(Int)
+                created_stmt_ind[id] = ii
+            end
         end
     end
     return created_stmt_ind
@@ -163,7 +183,7 @@ it is the main method of this file, and calls all the ones defined earlier.
 function instrument!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflection)
     ir = reflection.code_info
 
-    slot_created_ons = created_on(ir)
+    slot_created_ons = created_on(reflection)
     extended_insert_statements!(
         ir.code, ir.codelocs,
         (stmt, i) -> stmt isa Expr ? enter_debug_statements_count(slot_created_ons, i) : nothing,
