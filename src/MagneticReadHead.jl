@@ -29,10 +29,9 @@ include("breakpoints.jl")
 
 struct UserAbortedException <: Exception end
 
-function iron_debug(body, _module, mode)
-    ctx = HandEvalCtx(_module, mode)
+function iron_debug(debugbody, ctx)
     try
-        return Cassette.recurse(ctx, body)
+        return Cassette.recurse(ctx, debugbody)
     catch err
         err isa UserAbortedException || rethrow()
         nothing
@@ -47,15 +46,28 @@ end
 Run until the_code until a breakpoint is hit.
 """
 macro run(body)
-    :(iron_debug(()->$(esc(body)), $(__module__), StepContinue))
+    quote
+        ctx = HandEvalCtx($(__module__), StepContinue)
+        iron_debug(ctx) do
+            $(esc(body))
+        end
+    end
 end
+
+
 
 """
     @enter the_code
 Begin debugging and break on the start of the_code.
 """
 macro enter(body)
-    :(iron_debug(()->$(esc(body)), $(__module__), StepNext))
+     quote
+        ctx = HandEvalCtx($(__module__), StepContinue)
+        iron_debug(ctx) do
+            ctx.metadata.stepping_mode = StepIn
+            $(esc(body))
+        end
+    end
 end
 
 end # module
