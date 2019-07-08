@@ -25,12 +25,12 @@ function set_breakpoint!(the_rules::BreakpointRules, args...)
     return append!(the_rules.breakon_rules, rules(args...))
 end
 
-function set_nodebug!(the_rules::BreakpointRules, arg::T) where T
+function set_uninstrumented!(the_rules::BreakpointRules, arg::T) where T
     T !== Method || throw(ArgumentError("Disabling instrumentation per method, is not supported."))
     return push!(the_rules.no_instrument_rules, Rule(arg))
 end
 
-for (name, list) in ((:breakpoint, :breakon_rules), (:nodebug, :no_instrument_rules))
+for (name, list) in ((:breakpoint, :breakon_rules), (:uninstrumented, :no_instrument_rules))
     set! = Symbol(:set_, name, :!)
     @eval export $(set!)
     @eval $(set!)(args...) = $(set!)(GLOBAL_BREAKPOINT_RULES, args...)
@@ -47,7 +47,7 @@ for (name, list) in ((:breakpoint, :breakon_rules), (:nodebug, :no_instrument_ru
         end
         return the_rules.$list
     end
-    
+
     list_all = Symbol(:list_, name,:s)
     @eval export $(list_all)
     @eval $(list_all)()=$(list_all)(GLOBAL_BREAKPOINT_RULES)

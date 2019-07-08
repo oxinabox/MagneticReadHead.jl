@@ -18,8 +18,8 @@ end
 ###############
 
 function get_user_input(io=stdin)
-    printstyled("iron>"; color=:light_red)
-    
+    printstyled("debug> "; color=:light_red)
+
     ast = nothing
     line = ""
     while true

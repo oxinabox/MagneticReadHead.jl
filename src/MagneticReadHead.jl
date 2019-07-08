@@ -9,7 +9,7 @@ using CodeTracking
 using Revise: Revise
 using OrderedCollections
 
-export @iron_debug
+export @run, @enter
 
 
 include("utils.jl")
@@ -29,18 +29,43 @@ include("breakpoints.jl")
 
 struct UserAbortedException <: Exception end
 
+function iron_debug(debugbody, ctx)
+    try
+        return Cassette.recurse(ctx, debugbody)
+    catch err
+        err isa UserAbortedException || rethrow()
+        nothing
+    finally
+        # Disable any stepping left-over
+        ctx.metadata.stepping_mode =  StepContinue
+    end
+end
 
-macro iron_debug(body)
+"""
+    @run the_code
+Run until the_code until a breakpoint is hit.
+"""
+macro run(body)
     quote
         ctx = HandEvalCtx($(__module__), StepContinue)
-        try
-            return Cassette.recurse(ctx, ()->$(esc(body)))
-        catch err
-            err isa UserAbortedException || rethrow()
-            nothing
-        finally
-            # Disable any stepping left-over
-            ctx.metadata.stepping_mode =  StepContinue
+        iron_debug(ctx) do
+            $(esc(body))
+        end
+    end
+end
+
+
+
+"""
+    @enter the_code
+Begin debugging and break on the start of the_code.
+"""
+macro enter(body)
+     quote
+        ctx = HandEvalCtx($(__module__), StepContinue)
+        iron_debug(ctx) do
+            ctx.metadata.stepping_mode = StepIn
+            $(esc(body))
         end
     end
 end
