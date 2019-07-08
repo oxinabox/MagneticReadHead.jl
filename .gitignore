@@ -6,5 +6,5 @@
 *.jl.*.cov
 *.jl.mem
 /dev
-
+**.ipynb_checkpoints
 statprof/
