@@ -53,3 +53,25 @@ end
     end
 end
 
+
+@testset "let blocks in branches" begin
+    # this is the breaking case that means we need to check when variables come into scope
+
+    function danger11(x)
+        if x==1
+            y=1
+            return x
+        elseif x==2
+            let
+                m=2
+                x+=m
+            end
+            return 2x
+        end
+        return x
+    end
+
+    ctx = HandEvalCtx(@__MODULE__)
+    res = Cassette.recurse(ctx, danger11, 1)
+    @test res == 1
+end
