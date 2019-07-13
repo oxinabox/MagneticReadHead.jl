@@ -61,7 +61,7 @@ end
 Begin debugging and break on the start of the_code.
 """
 macro enter(body)
-    if body isa Expr && body.head==:call
+    if body isa Expr && body.head==:call && body.args[1] isa Symbol
         body = MacroTools.striplines(body)
         #break_target = body.args[1] #
         break_target = :(InteractiveUtils.which($(body.args[1]), Base.typesof($(body.args[2:end])...)))
@@ -78,12 +78,7 @@ macro enter(body)
         end
     else
         quote
-            @warn "Cannot identify function being `@enter`ed, engaging fallback mode"
-            ctx = HandEvalCtx($(__module__), StepContinue)
-            iron_debug(ctx) do
-                ctx.metadata.stepping_mode = StepIn
-                $(esc(body))
-            end
+            error("Expression too complex to `@enter`. Please use `@run` with manual breakpoint set")
         end
     end
 end

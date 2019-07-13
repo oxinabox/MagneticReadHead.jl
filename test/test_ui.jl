@@ -98,6 +98,15 @@ clear_breakpoints!(); clear_uninstrumenteds!()
     @test isempty(list_breakpoints())
 #end
 
+clear_breakpoints!(); clear_uninstrumenteds!()
+#@testset "@enter, too complex" begin
+    make_readline_patch(["CC"])
+    record = make_recording_breakpoint_hit_patch()
+
+    @test_throws ErrorException (@enter (()->eg1())())
+    @test isempty(list_breakpoints())
+#end
+
 
 
 ###############################################
