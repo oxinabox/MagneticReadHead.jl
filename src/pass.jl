@@ -77,18 +77,19 @@ function created_on(reflection)
         created_stmt_ind[id] = 0
     end
     
-    # Scan for assignments or for `Core.NewvarNode`s
+    # Scan for assignments or for uses
     for (ii, stmt) in enumerate(ir.code)
-        id = -1
         if isexpr(stmt, :(=)) && stmt.args[1] isa Core.SlotNumber
             id = stmt.args[1].id
-     #   elseif stmt isa Core.NewvarNode
-      #      id = stmt.slot.id
-        end
-
-        if id != -1  && created_stmt_ind[id] == typemax(Int)  # i.e. found something new
-            created_stmt_ind[id] = ii
-        end
+            created_stmt_ind[id] = min(created_stmt_ind[id], ii)
+        elseif isexpr(stmt, :call)
+            for arg in stmt.args
+                if arg isa Core.SlotNumber
+                    id = arg.id
+                    created_stmt_ind[id] = min(created_stmt_ind[id], ii)
+                end
+            end
+         end
     end
     return created_stmt_ind
 end
