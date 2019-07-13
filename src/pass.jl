@@ -71,9 +71,6 @@ function created_on(reflection)
     # #self# and all the arguments are created at start
     nargs = reflection.method.nargs
     if nargs > length(created_stmt_ind)
-        @show reflection.method
-        @show nargs
-        @show ir.slotnames
         error("More arguments than slots")
     end
     for id in 1 : nargs
@@ -82,11 +79,15 @@ function created_on(reflection)
     
     # Scan for assignments or for `Core.NewvarNode`s
     for (ii, stmt) in enumerate(ir.code)
+        id = -1
         if isexpr(stmt, :(=)) && stmt.args[1] isa Core.SlotNumber
             id = stmt.args[1].id
-            if created_stmt_ind[id] == typemax(Int)
-                created_stmt_ind[id] = ii
-            end
+     #   elseif stmt isa Core.NewvarNode
+      #      id = stmt.slot.id
+        end
+
+        if id != -1  && created_stmt_ind[id] == typemax(Int)  # i.e. found something new
+            created_stmt_ind[id] = ii
         end
     end
     return created_stmt_ind
