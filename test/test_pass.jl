@@ -1,6 +1,6 @@
 
 using MagneticReadHead
-using MagneticReadHead: HandEvalCtx, handeval_pass
+using MagneticReadHead: new_debug_ctx
 using Cassette
 using Test
 
@@ -9,7 +9,7 @@ using InteractiveUtils
 # This test we are keeping around just to demonstrate how to
 # check on when things go wrong
 @testset "_totuple" begin
-    ctx = HandEvalCtx()
+    ctx = new_debug_ctx()
     ir = @code_lowered Cassette.recurse(ctx, Base._totuple, Tuple, 20)
     #@show ir
     #@show ir.codelocs
@@ -27,7 +27,7 @@ end
         (fn = Base._totuple, args=(Tuple, 41)),
     )
     for code in normal_codes
-        ctx = HandEvalCtx()
+        ctx = new_debug_ctx()
         expected = code.fn(code.args...)
         direct_recurse = Cassette.recurse(ctx, code.fn, code.args...)
         @test expected == direct_recurse
@@ -42,12 +42,12 @@ function boopa!(x,y)
 end
 
 @testset "basic mutating function" begin
-    ctx = HandEvalCtx()
+    ctx = new_debug_ctx()
     res = Cassette.recurse(ctx, boopa!, [1,2], 3)
     @test res == [3,2]
 
     @testset "function calling a basic mutating function" begin
-        ctx = HandEvalCtx()
+        ctx = new_debug_ctx()
         res = Cassette.recurse(ctx, ()->boopa!([1,2],4))
         @test res == [4,2]
     end
@@ -71,7 +71,7 @@ end
         return x
     end
 
-    ctx = HandEvalCtx()
+    ctx = new_debug_ctx()
     res = Cassette.recurse(ctx, danger11, 1)
     @test res == 1
 end
@@ -87,7 +87,7 @@ end
         inner()
     end
 
-    ctx = HandEvalCtx()
+    ctx = new_debug_ctx()
     res = Cassette.recurse(ctx, danger19)
     @test res == 2
 end

@@ -5,15 +5,16 @@ Cassette.@context HandEvalCtx
 const GLOBAL_BREAKPOINT_RULES = BreakpointRules()
 const GLOBAL_STEPPING_MODE = Ref(StepContinue)
 
-function HandEvalCtx()
+
+"""
+    new_debug_ctx()::HandEvalCtx
+creates a debug context, with the pass set
+and extranious hooks disabled.
+"""
+function new_debug_ctx()
     ctx = HandEvalCtx(;pass=handeval_pass)
     return Cassette.disablehooks(ctx)
 end
-
-function Cassette.overdub(::typeof(HandEvalCtx()), args...)
-    error("HandEvalCtx without any had an overdub called on it. This should never happen as HandEvalCtx should never be constructed without giving them their metadata.")
-end
-
 
 @inline function Cassette.overdub(ctx::HandEvalCtx, f, args...)
     # This is basically the epicenter of all the logic

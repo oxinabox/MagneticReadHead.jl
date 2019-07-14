@@ -31,7 +31,7 @@ struct UserAbortedException <: Exception end
 
 function iron_debug(debugbody)
     try
-        ctx = HandEvalCtx()
+        ctx = new_debug_ctx()
         return Cassette.recurse(ctx, debugbody)
     catch err
         err isa UserAbortedException || rethrow()
