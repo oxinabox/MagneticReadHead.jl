@@ -50,7 +50,7 @@ Returns true if according to the rules, the specified
 method or function should be instrumented with potential breakpoints.
 The default is to instrument everything.
 """
-function should_instrument(rules::BreakpointRules, method)
+@inline function should_instrument(rules::BreakpointRules, method)
     # If we are going to break on it, then definately instrument it
     for rule in rules.breakon_rules
         match(rule, method) && return true
