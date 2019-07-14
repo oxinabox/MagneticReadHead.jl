@@ -128,7 +128,7 @@ function enter_debug_statements(
         call_expr(Base, :getindex, GlobalRef(Core, :Any)),
     ]
     stop_cond_ssa = Core.SSAValue(ind)
-    # Skip the pplaceholder
+    # Skip the placeholder
     names_ssa = Core.SSAValue(ind + 2)
     values_ssa = Core.SSAValue(ind + 3)
     cur_ind = ind + 4
@@ -148,7 +148,6 @@ function enter_debug_statements(
 
     push!(statements, call_expr(
         MagneticReadHead, :break_action,
-        Expr(:contextslot),
         method,
         orig_ind,
         names_ssa, values_ssa)

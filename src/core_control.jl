@@ -5,13 +5,8 @@ Cassette.@context HandEvalCtx
 const GLOBAL_BREAKPOINT_RULES = BreakpointRules()
 const GLOBAL_STEPPING_MODE = Ref(StepContinue)
 
-
-mutable struct HandEvalMeta
-    eval_module::Module
-end
-
-function HandEvalCtx(eval_module)
-    ctx = HandEvalCtx(;metadata=HandEvalMeta(eval_module), pass=handeval_pass)
+function HandEvalCtx()
+    ctx = HandEvalCtx(;pass=handeval_pass)
     return Cassette.disablehooks(ctx)
 end
 

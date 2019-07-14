@@ -29,8 +29,9 @@ include("breakpoints.jl")
 
 struct UserAbortedException <: Exception end
 
-function iron_debug(debugbody, ctx)
+function iron_debug(debugbody)
     try
+        ctx = HandEvalCtx()
         return Cassette.recurse(ctx, debugbody)
     catch err
         err isa UserAbortedException || rethrow()
@@ -47,8 +48,7 @@ Run until the_code until a breakpoint is hit.
 """
 macro run(body)
     quote
-        ctx = HandEvalCtx($(__module__))
-        iron_debug(ctx) do
+        iron_debug() do
             $(esc(body))
         end
     end
@@ -65,10 +65,9 @@ macro enter(body)
         body = MacroTools.striplines(body)
         break_target = :(InteractiveUtils.which($(body.args[1]), Base.typesof($(body.args[2:end])...)))
         quote
-            ctx = HandEvalCtx($(__module__))
             set_breakpoint!($(esc(break_target)))
             try
-                iron_debug(ctx) do
+                iron_debug() do
                     $(esc(body))
                 end
             finally
