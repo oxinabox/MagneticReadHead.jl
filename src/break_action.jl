@@ -1,10 +1,10 @@
-set_stepping_mode!(mode) = metadata->metadata.stepping_mode=mode
+set_stepping_mode!(mode) = ()->GLOBAL_STEPPING_MODE[]=mode
 const actions = OrderedDict([
    :CC => (desc="Continue",  act=set_stepping_mode!(StepContinue)),
    :SI => (desc="Step In",   act=set_stepping_mode!(StepIn)),
    :SN => (desc="Step Next", act=set_stepping_mode!(StepNext)),
    :SO => (desc="Step Out",  act=set_stepping_mode!(StepOut)),
-   :XX => (desc="Abort",     act=metadata->throw(UserAbortedException())),
+   :XX => (desc="Abort",     act=()->throw(UserAbortedException())),
 ])
 
 function print_commands()
@@ -87,5 +87,5 @@ function break_action(ctx, meth, statement_ind, slotnames, slotvals)
     breakpoint_hit(meth, statement_ind, variables)
 
     code_word = iron_repl(metadata, meth, statement_ind, variables)
-    actions[code_word].act(metadata)
+    actions[code_word].act()
 end
