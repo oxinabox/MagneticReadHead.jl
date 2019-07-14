@@ -2,25 +2,16 @@ Cassette.@context HandEvalCtx
 
 @enum SteppingMode StepIn StepNext StepContinue StepOut
 
+const GLOBAL_BREAKPOINT_RULES = BreakpointRules()
+const GLOBAL_STEPPING_MODE = Ref(StepContinue)
+
+
 mutable struct HandEvalMeta
     eval_module::Module
-    stepping_mode::SteppingMode
-    breakpoint_rules::BreakpointRules
 end
 
-# TODO: Workout how and if we are actually going to do this in a nonglobal way
-const GLOBAL_BREAKPOINT_RULES = BreakpointRules()
-
-function HandEvalMeta(eval_module, stepping_mode)
-    return HandEvalMeta(
-        eval_module,
-        stepping_mode,
-        GLOBAL_BREAKPOINT_RULES
-    )
-end
-
-function HandEvalCtx(eval_module, stepping_mode=StepContinue)
-    ctx = HandEvalCtx(;metadata=HandEvalMeta(eval_module, stepping_mode), pass=handeval_pass)
+function HandEvalCtx(eval_module)
+    ctx = HandEvalCtx(;metadata=HandEvalMeta(eval_module), pass=handeval_pass)
     return Cassette.disablehooks(ctx)
 end
 
@@ -33,23 +24,23 @@ end
     # This is basically the epicenter of all the logic
     # We control the flow of stepping modes
     # and which methods are instrumented or not.
-    cur_mode = ctx.metadata.stepping_mode
+    cur_mode = GLOBAL_STEPPING_MODE[]
 
     should_recurse =
         cur_mode === StepIn ||
-        should_instrument(ctx.metadata.breakpoint_rules, f)
+        should_instrument(GLOBAL_BREAKPOINT_RULES, f)
 
     if should_recurse
         if Cassette.canrecurse(ctx, f, args...)
             # Both StepOut and StepContinue means child should StepContinue
-            ctx.metadata.stepping_mode = cur_mode === StepIn ? StepNext : StepContinue
+            GLOBAL_STEPPING_MODE[] = cur_mode === StepIn ? StepNext : StepContinue
             # Determine stepping mode for child
             try
                 return Cassette.recurse(ctx, f, args...)
             finally
                 # Determine stepping mode for parent
-                child_instruction = ctx.metadata.stepping_mode
-                ctx.metadata.stepping_mode =
+                child_instruction = GLOBAL_STEPPING_MODE[]
+                GLOBAL_STEPPING_MODE[] =
                     child_instruction !== StepContinue ? StepNext :
                         cur_mode === StepIn ? StepContinue : cur_mode
 

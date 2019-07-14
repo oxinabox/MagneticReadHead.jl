@@ -68,9 +68,9 @@ end
     should_break
 Determines if we should actualy break at a potential breakpoint
 """
-function should_break(ctx, meth, statement_ind)
-    return ctx.metadata.stepping_mode === StepNext ||
-        should_breakon(ctx.metadata.breakpoint_rules, meth, statement_ind)
+function should_break(meth, statement_ind)
+    return GLOBAL_STEPPING_MODE[] === StepNext ||
+        should_breakon(GLOBAL_BREAKPOINT_RULES, meth, statement_ind)
 end
 
 

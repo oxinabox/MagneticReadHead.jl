@@ -122,7 +122,7 @@ function enter_debug_statements(
     )
     
     statements = [
-        call_expr(MagneticReadHead, :should_break, Expr(:contextslot), method, orig_ind),
+        call_expr(MagneticReadHead, :should_break, method, orig_ind),
         Expr(:REPLACE_THIS_WITH_GOTOIFNOT_AT_END),
         call_expr(Base, :getindex, GlobalRef(Core, :Symbol)),
         call_expr(Base, :getindex, GlobalRef(Core, :Any)),
