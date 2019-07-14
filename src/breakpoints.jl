@@ -41,9 +41,9 @@ for (name, list) in ((:breakpoint, :breakon_rules), (:uninstrumented, :no_instru
     @eval function $(rm!)(the_rules::BreakpointRules, args...)
         old_num_rules = length(the_rules.$list)
         to_remove = rules(args...)
-        filter!(x->x∈to_remove, the_rules.$list)
+        filter!(!in(to_remove), the_rules.$list)
         if length(the_rules.$list) == old_num_rules
-            @info("No matching $($name) was found, so none removed")
+            @info("No matching rule was found, so none removed")
         end
         return the_rules.$list
     end

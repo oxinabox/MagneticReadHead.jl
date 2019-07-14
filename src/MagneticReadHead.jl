@@ -61,11 +61,23 @@ end
 Begin debugging and break on the start of the_code.
 """
 macro enter(body)
-     quote
-        ctx = HandEvalCtx($(__module__), StepContinue)
-        iron_debug(ctx) do
-            ctx.metadata.stepping_mode = StepIn
-            $(esc(body))
+    if body isa Expr && body.head==:call && body.args[1] isa Symbol
+        body = MacroTools.striplines(body)
+        break_target = :(InteractiveUtils.which($(body.args[1]), Base.typesof($(body.args[2:end])...)))
+        quote
+            ctx = HandEvalCtx($(__module__), StepContinue)
+            set_breakpoint!($(esc(break_target)))
+            try
+                iron_debug(ctx) do
+                    $(esc(body))
+                end
+            finally
+                rm_breakpoint!($(esc(break_target)))
+            end
+        end
+    else
+        quote
+            error("Expression too complex to `@enter`. Please use `@run` with manual breakpoint set")
         end
     end
 end
