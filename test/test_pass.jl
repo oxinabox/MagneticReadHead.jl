@@ -75,3 +75,19 @@ end
     res = Cassette.recurse(ctx, danger11, 1)
     @test res == 1
 end
+
+@testset "Closures that modify outer content" begin
+    function danger19()
+        y=2
+        function inner()
+            h=y
+            y=12
+            return h
+        end
+        inner()
+    end
+
+    ctx = HandEvalCtx(@__MODULE__)
+    res = Cassette.recurse(ctx, danger19)
+    @test res == 2
+end
