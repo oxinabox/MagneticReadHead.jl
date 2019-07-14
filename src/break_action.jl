@@ -1,10 +1,10 @@
-set_stepping_mode!(mode) = metadata->metadata.stepping_mode=mode
+set_stepping_mode!(mode) = ()->GLOBAL_STEPPING_MODE[]=mode
 const actions = OrderedDict([
    :CC => (desc="Continue",  act=set_stepping_mode!(StepContinue)),
    :SI => (desc="Step In",   act=set_stepping_mode!(StepIn)),
    :SN => (desc="Step Next", act=set_stepping_mode!(StepNext)),
    :SO => (desc="Step Out",  act=set_stepping_mode!(StepOut)),
-   :XX => (desc="Abort",     act=metadata->throw(UserAbortedException())),
+   :XX => (desc="Abort",     act=()->throw(UserAbortedException())),
 ])
 
 function print_commands()
@@ -54,23 +54,23 @@ end
 # this function exists only for mocking so we can test it.
 breakpoint_hit(meth, statement_ind, variables) = nothing
 
-function iron_repl(metadata::HandEvalMeta, meth, statement_ind, variables)
+function iron_repl(meth, statement_ind, variables)
     breadcrumbs(meth, statement_ind)
 
     printstyled("Vars: "; color=:light_yellow)
     println(join(keys(variables), ", "))
     print_commands()
 
-    run_repl(variables, metadata.eval_module)
+    run_repl(variables, Main)
 end
 
 """
     should_break
 Determines if we should actualy break at a potential breakpoint
 """
-function should_break(ctx, meth, statement_ind)
-    return ctx.metadata.stepping_mode === StepNext ||
-        should_breakon(ctx.metadata.breakpoint_rules, meth, statement_ind)
+function should_break(meth, statement_ind)
+    return GLOBAL_STEPPING_MODE[] === StepNext ||
+        should_breakon(GLOBAL_BREAKPOINT_RULES, meth, statement_ind)
 end
 
 
@@ -79,13 +79,12 @@ end
 
 What to do when a breakpoint is hit
 """
-function break_action(ctx, meth, statement_ind, slotnames, slotvals)
-    metadata = ctx.metadata
+function break_action(meth, statement_ind, slotnames, slotvals)
 
     variables = LittleDict(slotnames, slotvals)
     pop!(variables, Symbol("#self#"))
     breakpoint_hit(meth, statement_ind, variables)
 
-    code_word = iron_repl(metadata, meth, statement_ind, variables)
-    actions[code_word].act(metadata)
+    code_word = iron_repl(meth, statement_ind, variables)
+    actions[code_word].act()
 end
