@@ -66,9 +66,12 @@ function created_on(reflection)
     # https://github.com/JuliaLang/julia/blob/236df47251c203c71abd0604f2f19bf1f9c639fd/base/compiler/ssair/slot2ssa.jl#L47
     
     ir = reflection.code_info
-    created_stmt_ind = fill(typemax(Int), length(ir.slotnames))
-    
+    #created_stmt_ind = fill(typemax(Int), length(ir.slotnames))
+    created_stmt_ind = fill(0, length(ir.slotnames))
+    banned = falses(length(ir.slotnames))
+
     # #self# and all the arguments are created at start
+    #==
     nargs = reflection.method.nargs
     if nargs > length(created_stmt_ind)
         error("More arguments than slots")
@@ -76,10 +79,15 @@ function created_on(reflection)
     for id in 1 : nargs
         created_stmt_ind[id] = 0
     end
-    
+    ==#
     # Scan for assignments or for uses
+    
     for (ii, stmt) in enumerate(ir.code)
-        if isexpr(stmt, :(=)) && stmt.args[1] isa Core.SlotNumber
+        if stmt isa Core.NewvarNode
+            id = stmt.slot.id
+            banned[id] = true
+        #==
+        elseif isexpr(stmt, :(=)) && stmt.args[1] isa Core.SlotNumber
             id = stmt.args[1].id
             created_stmt_ind[id] = min(created_stmt_ind[id], ii)
         elseif isexpr(stmt, :call)
@@ -89,7 +97,14 @@ function created_on(reflection)
                     created_stmt_ind[id] = min(created_stmt_ind[id], ii)
                 end
             end
-         end
+        ==#
+        end
+    end
+
+    for id in eachindex(banned)
+        if banned[id]
+            created_stmt_ind[id] = typemax(Int)
+        end
     end
     return created_stmt_ind
 end
