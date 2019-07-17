@@ -1,7 +1,7 @@
 name = "MagneticReadHead"
 uuid = "63dd013e-5414-5e51-b21a-a24e12ed54cf"
 authors = ["Lyndon White <lyndon.white@invenialabs.co.uk>"]
-version = "0.3.0"
+version = "0.3.0-dev"
 
 [deps]
 Cassette = "7057c7e9-c182-5462-911a-8362d720325c"
