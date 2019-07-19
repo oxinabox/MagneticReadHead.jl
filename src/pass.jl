@@ -69,7 +69,9 @@ function created_on(reflection)
     created_stmt_ind = fill(typemax(Int), length(ir.slotnames))
     banned = falses(length(ir.slotnames))
 
-    # #self# and all the arguments are created at start
+    banned[1] = true  # Don't need #self
+
+    # all the arguments are created at start
     nargs = reflection.method.nargs
     if nargs > length(created_stmt_ind)
         error("More arguments than slots")
