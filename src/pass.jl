@@ -66,12 +66,10 @@ function created_on(reflection)
     # https://github.com/JuliaLang/julia/blob/236df47251c203c71abd0604f2f19bf1f9c639fd/base/compiler/ssair/slot2ssa.jl#L47
     
     ir = reflection.code_info
-    #created_stmt_ind = fill(typemax(Int), length(ir.slotnames))
-    created_stmt_ind = fill(0, length(ir.slotnames))
+    created_stmt_ind = fill(typemax(Int), length(ir.slotnames))
     banned = falses(length(ir.slotnames))
 
     # #self# and all the arguments are created at start
-    #==
     nargs = reflection.method.nargs
     if nargs > length(created_stmt_ind)
         error("More arguments than slots")
@@ -79,14 +77,12 @@ function created_on(reflection)
     for id in 1 : nargs
         created_stmt_ind[id] = 0
     end
-    ==#
-    # Scan for assignments or for uses
     
+    # Scan for assignments or for uses
     for (ii, stmt) in enumerate(ir.code)
         if stmt isa Core.NewvarNode
             id = stmt.slot.id
             banned[id] = true
-        #==
         elseif isexpr(stmt, :(=)) && stmt.args[1] isa Core.SlotNumber
             id = stmt.args[1].id
             created_stmt_ind[id] = min(created_stmt_ind[id], ii)
@@ -97,7 +93,6 @@ function created_on(reflection)
                     created_stmt_ind[id] = min(created_stmt_ind[id], ii)
                 end
             end
-        ==#
         end
     end
 
@@ -139,8 +134,8 @@ function enter_debug_statements(
     statements = [
         call_expr(MagneticReadHead, :should_break, method, orig_ind),
         Expr(:REPLACE_THIS_WITH_GOTOIFNOT_AT_END),
-        call_expr(Base, :getindex, GlobalRef(Core, :Symbol)),
-        call_expr(Base, :getindex, GlobalRef(Core, :Any)),
+        Tuple(slotnames),
+        call_expr(Base, :fill, GlobalRef(Base, :nothing), length(slotnames)),
     ]
     stop_cond_ssa = Core.SSAValue(ind)
     # Skip the placeholder
@@ -153,12 +148,11 @@ function enter_debug_statements(
         slot = Core.SlotNumber(slotind)
         append!(statements, (
             Expr(:isdefined, slot),             # cur_ind
-            Expr(:gotoifnot, Core.SSAValue(cur_ind), cur_ind + 4),    # cur_ind + 1
-            call_expr(Base, :push!, names_ssa, QuoteNode(slotname)),  # cur_ind + 2
-            call_expr(Base, :push!, values_ssa, slot)   # cur_ind + 3
+            Expr(:gotoifnot, Core.SSAValue(cur_ind), cur_ind + 3),    # cur_ind + 1
+            call_expr(Base, :setindex!, values_ssa, slot, slotind)   # cur_ind + 2
         ))
 
-        cur_ind += 4
+        cur_ind += 3
     end
 
     push!(statements, call_expr(
@@ -184,7 +178,7 @@ function enter_debug_statements_count(slot_created_ons, orig_ind)
 
     for slot_created_on in slot_created_ons
         if orig_ind > slot_created_on
-            n_statements  += 4
+            n_statements  += 3
         end
     end
     n_statements += 2
