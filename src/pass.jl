@@ -200,7 +200,11 @@ function instrument!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflection)
     slot_created_ons = created_on(reflection)
     extended_insert_statements!(
         ir.code, ir.codelocs,
-        (stmt, i) -> stmt isa Expr ? enter_debug_statements_count(slot_created_ons, i) : nothing,
+        (stmt, ii) -> begin
+            stmt isa Expr || return nothing
+            ii>1 && @inbounds(ir.codelocs[ii]==ir.codelocs[ii-1]) && return nothing
+            return enter_debug_statements_count(slot_created_ons, ii)
+        end,
         (stmt, i, orig_i) -> enter_debug_statements(
             ir.slotnames, slot_created_ons, reflection.method,
             stmt, i, orig_i
