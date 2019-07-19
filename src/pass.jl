@@ -31,7 +31,7 @@ function extended_insert_statements!(code, codelocs, stmtcount, newstmts)
     ssachangemap = fill(0, length(code))
     labelchangemap = fill(0, length(code))
     worklist = Tuple{Int,Int}[]
-    for i in 1:length(code)
+    @inbounds for i in 1:length(code)
         stmt = code[i]
         nstmts = stmtcount(stmt, i)
         if nstmts !== nothing
@@ -44,7 +44,7 @@ function extended_insert_statements!(code, codelocs, stmtcount, newstmts)
         end
     end
     Core.Compiler.renumber_ir_elements!(code, ssachangemap, labelchangemap)
-    for (src_i, addedstmts) in worklist
+    @inbounds for (src_i, addedstmts) in worklist
         dest_i = src_i + ssachangemap[src_i] - addedstmts # correct the index for accumulated offsets
         stmts = newstmts(code[dest_i], dest_i, src_i)
         @assert(length(stmts) == (addedstmts + 1), "$(length(stmts)) == $(addedstmts + 1)")
@@ -61,7 +61,7 @@ end
 Given an `Cassette.Reflection` returns a vector the same length as slotnames,
 which each entry is the ir statment index for where the coresponding variable was delcared
 """
-function created_on(reflection)
+@inline function created_on(reflection)
     # This is a simplification of
     # https://github.com/JuliaLang/julia/blob/236df47251c203c71abd0604f2f19bf1f9c639fd/base/compiler/ssair/slot2ssa.jl#L47
     
@@ -128,7 +128,7 @@ show the debugging prompt.
  - ind: the actual index in the code IR this is being  inserted at. This is where the SSAValues start from
  - orig_ind: the index in the original code IR for where this is being inserted. (before other debug statements were inserted above)
 """
-function enter_debug_statements(
+@inline function enter_debug_statements(
     slotnames, slot_created_ons, method::Method,
     stmt, ind::Int, orig_ind::Int
     )
@@ -194,7 +194,7 @@ end
 This is the transform for the debugger cassette pass.
 it is the main method of this file, and calls all the ones defined earlier.
 """
-function instrument!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflection)
+@inline function instrument!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflection)
     ir = reflection.code_info
 
     slot_created_ons = created_on(reflection)
