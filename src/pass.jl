@@ -131,39 +131,41 @@ function enter_debug_statements(
     stmt, ind::Int, orig_ind::Int
     )
     
-    statements = [
-        call_expr(MagneticReadHead, :should_break, method, orig_ind),
-        Expr(:REPLACE_THIS_WITH_GOTOIFNOT_AT_END),
-        Tuple(slotnames),
-        call_expr(Base, :fill, GlobalRef(Base, :nothing), length(slotnames)),
-    ]
+    stmt_count = enter_debug_statements_count(slot_created_ons, orig_ind)
+    statements = Vector{Any}(undef, stmt_count)
+    statements[1] = call_expr(MagneticReadHead, :should_break, method, orig_ind)
+    statements[2] = Expr(:gotoifnot, Core.SSAValue(ind), ind + stmt_count - 1)
+    statements[3] = Tuple(slotnames)
+    statements[4] = call_expr(Base, :fill, GlobalRef(Base, :nothing), length(slotnames))
+
     stop_cond_ssa = Core.SSAValue(ind)
     # Skip the placeholder
     names_ssa = Core.SSAValue(ind + 2)
     values_ssa = Core.SSAValue(ind + 3)
     cur_ind = ind + 4
+    stmt_ii = 5
     # Now we store all of the slots that have values assigned to them
     for (slotind, (slotname, slot_created_on)) in enumerate(zip(slotnames, slot_created_ons))
         orig_ind > slot_created_on || continue
         slot = Core.SlotNumber(slotind)
-        append!(statements, (
-            Expr(:isdefined, slot),             # cur_ind
-            Expr(:gotoifnot, Core.SSAValue(cur_ind), cur_ind + 3),    # cur_ind + 1
-            call_expr(Base, :setindex!, values_ssa, slot, slotind)   # cur_ind + 2
-        ))
+        statements[stmt_ii] = Expr(:isdefined, slot)
+        statements[stmt_ii+1] = Expr(:gotoifnot, Core.SSAValue(cur_ind), cur_ind + 3)
+        statements[stmt_ii+2] = call_expr(Base, :setindex!, values_ssa, slot, slotind)
 
         cur_ind += 3
+        stmt_ii += 3
     end
 
-    push!(statements, call_expr(
+    statements[end-1] = call_expr(
         MagneticReadHead, :break_action,
         method,
         orig_ind,
-        names_ssa, values_ssa)
+        names_ssa, values_ssa
     )
     # We now know how many statements we added so can set how far we are going to jump in the inital condition.
-    statements[2] = Expr(:gotoifnot, stop_cond_ssa, ind + length(statements))
-    push!(statements, stmt)  # last put im the original statement -- this is where we jump to
+    statements[end] = stmt  # last put im the original statement -- this is where we jump to
+    #Core.println(statements)
+    #@assert all(ii->isdefined(statements, ii), eachindex(statements))
     return statements
 end
 
