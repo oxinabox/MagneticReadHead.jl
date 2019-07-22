@@ -68,10 +68,13 @@ end
     should_break
 Determines if we should actualy break at a potential breakpoint
 """
-function should_break(meth, statement_ind)
-    return GLOBAL_STEPPING_MODE[] === StepNext ||
+@inline function should_break(meth, statement_ind)
+   return unlikely(
+      GLOBAL_STEPPING_MODE[] === StepNext ||
         should_breakon(GLOBAL_BREAKPOINT_RULES, meth, statement_ind)
+   )
 end
+@inline unlikely(x::Bool) = ccall("llvm.expect.i8", llvmcall, Bool, (Bool, Bool), x, false)
 
 
 """
