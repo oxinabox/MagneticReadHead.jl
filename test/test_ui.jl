@@ -136,6 +136,7 @@ function var_demo1(x)
     z=2x
     y=z
     z=1
+    return 0
 end
 
 clear_breakpoints!(); clear_uninstrumenteds!()

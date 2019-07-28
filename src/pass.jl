@@ -13,7 +13,12 @@ end
 The reality is a bit more complicated, as you can't ask if a variable is defined
 before it is declared. But that is the principle.
 ==#
-
+"""
+    VariableNotDefined()
+A sentinel singleton to make that a variable (slot) is not defined.
+"""
+struct VariableNotDefined end
+@inline init_variables_list(nslots)  = Any[VariableNotDefined() for _ in 1:nslots]
 
 """
     extended_insert_statements!(code, codelocs, stmtcount, newstmts)
@@ -64,7 +69,7 @@ which each entry is the ir statment index for where the coresponding variable wa
 @inline function created_on(reflection)
     # This is a simplification of
     # https://github.com/JuliaLang/julia/blob/236df47251c203c71abd0604f2f19bf1f9c639fd/base/compiler/ssair/slot2ssa.jl#L47
-    
+
     ir = reflection.code_info
     created_stmt_ind = fill(typemax(Int), length(ir.slotnames))
     banned = falses(length(ir.slotnames))
@@ -79,7 +84,7 @@ which each entry is the ir statment index for where the coresponding variable wa
     for id in 1 : nargs
         created_stmt_ind[id] = 0
     end
-    
+
     # Scan for assignments or for uses
     for (ii, stmt) in enumerate(ir.code)
         if stmt isa Core.NewvarNode
@@ -107,11 +112,13 @@ which each entry is the ir statment index for where the coresponding variable wa
 end
 
 """
-    call_expr(mod:Module, func::Symbol, args...)
-This function returns the IR expression for calling the names function `func` from module `mod`, with the
+    call_expr([mod], func, args...)
+
+This function returns the IR expression for calling the given function, with the
 given args. It is maked with `nooverdub` which will stop Cassette recursing into it.
 """
-call_expr(mod::Module, func::Symbol, args...) = Expr(:call, Expr(:nooverdub, GlobalRef(mod, func)), args...)
+call_expr(mod::Module, func::Symbol, args...) = call_expr(GlobalRef(mod, func), args...)
+call_expr(f, args...) = Expr(:call, Expr(:nooverdub, f), args...)
 
 
 """
@@ -132,13 +139,13 @@ show the debugging prompt.
     slotnames, slot_created_ons, method::Method,
     stmt, ind::Int, orig_ind::Int
     )
-    
+
     stmt_count = enter_debug_statements_count(slot_created_ons, orig_ind)
     statements = Vector{Any}(undef, stmt_count)
     statements[1] = call_expr(MagneticReadHead, :should_break, method, orig_ind)
     statements[2] = Expr(:gotoifnot, Core.SSAValue(ind), ind + stmt_count - 1)
     statements[3] = Tuple(slotnames)
-    statements[4] = call_expr(Base, :fill, GlobalRef(Base, :nothing), length(slotnames))
+    statements[4] = call_expr(MagneticReadHead, :init_variables_list, length(slotnames))
 
     stop_cond_ssa = Core.SSAValue(ind)
     # Skip the placeholder
