@@ -13,7 +13,12 @@ end
 The reality is a bit more complicated, as you can't ask if a variable is defined
 before it is declared. But that is the principle.
 ==#
-
+"""
+    VariableNotDefined()
+A sentinel singleton to make that a variable (slot) is not defined.
+"""
+struct VariableNotDefined end
+@inline init_variables_list(nslots)  = Any[VariableNotDefined() for _ in 1:nslots]
 
 """
     extended_insert_statements!(code, codelocs, stmtcount, newstmts)
@@ -31,7 +36,7 @@ function extended_insert_statements!(code, codelocs, stmtcount, newstmts)
     ssachangemap = fill(0, length(code))
     labelchangemap = fill(0, length(code))
     worklist = Tuple{Int,Int}[]
-    for i in 1:length(code)
+    @inbounds for i in 1:length(code)
         stmt = code[i]
         nstmts = stmtcount(stmt, i)
         if nstmts !== nothing
@@ -44,7 +49,7 @@ function extended_insert_statements!(code, codelocs, stmtcount, newstmts)
         end
     end
     Core.Compiler.renumber_ir_elements!(code, ssachangemap, labelchangemap)
-    for (src_i, addedstmts) in worklist
+    @inbounds for (src_i, addedstmts) in worklist
         dest_i = src_i + ssachangemap[src_i] - addedstmts # correct the index for accumulated offsets
         stmts = newstmts(code[dest_i], dest_i, src_i)
         @assert(length(stmts) == (addedstmts + 1), "$(length(stmts)) == $(addedstmts + 1)")
@@ -61,14 +66,17 @@ end
 Given an `Cassette.Reflection` returns a vector the same length as slotnames,
 which each entry is the ir statment index for where the coresponding variable was delcared
 """
-function created_on(reflection)
+@inline function created_on(reflection)
     # This is a simplification of
     # https://github.com/JuliaLang/julia/blob/236df47251c203c71abd0604f2f19bf1f9c639fd/base/compiler/ssair/slot2ssa.jl#L47
-    
+
     ir = reflection.code_info
     created_stmt_ind = fill(typemax(Int), length(ir.slotnames))
-    
-    # #self# and all the arguments are created at start
+    banned = falses(length(ir.slotnames))
+
+    banned[1] = true  # Don't need #self
+
+    # all the arguments are created at start
     nargs = reflection.method.nargs
     if nargs > length(created_stmt_ind)
         error("More arguments than slots")
@@ -76,10 +84,13 @@ function created_on(reflection)
     for id in 1 : nargs
         created_stmt_ind[id] = 0
     end
-    
+
     # Scan for assignments or for uses
     for (ii, stmt) in enumerate(ir.code)
-        if isexpr(stmt, :(=)) && stmt.args[1] isa Core.SlotNumber
+        if stmt isa Core.NewvarNode
+            id = stmt.slot.id
+            banned[id] = true
+        elseif isexpr(stmt, :(=)) && stmt.args[1] isa Core.SlotNumber
             id = stmt.args[1].id
             created_stmt_ind[id] = min(created_stmt_ind[id], ii)
         elseif isexpr(stmt, :call)
@@ -89,17 +100,25 @@ function created_on(reflection)
                     created_stmt_ind[id] = min(created_stmt_ind[id], ii)
                 end
             end
-         end
+        end
+    end
+
+    for id in eachindex(banned)
+        if banned[id]
+            created_stmt_ind[id] = typemax(Int)
+        end
     end
     return created_stmt_ind
 end
 
 """
-    call_expr(mod:Module, func::Symbol, args...)
-This function returns the IR expression for calling the names function `func` from module `mod`, with the
+    call_expr([mod], func, args...)
+
+This function returns the IR expression for calling the given function, with the
 given args. It is maked with `nooverdub` which will stop Cassette recursing into it.
 """
-call_expr(mod::Module, func::Symbol, args...) = Expr(:call, Expr(:nooverdub, GlobalRef(mod, func)), args...)
+call_expr(mod::Module, func::Symbol, args...) = call_expr(GlobalRef(mod, func), args...)
+call_expr(f, args...) = Expr(:call, Expr(:nooverdub, f), args...)
 
 
 """
@@ -116,45 +135,46 @@ show the debugging prompt.
  - ind: the actual index in the code IR this is being  inserted at. This is where the SSAValues start from
  - orig_ind: the index in the original code IR for where this is being inserted. (before other debug statements were inserted above)
 """
-function enter_debug_statements(
+@inline function enter_debug_statements(
     slotnames, slot_created_ons, method::Method,
     stmt, ind::Int, orig_ind::Int
     )
-    
-    statements = [
-        call_expr(MagneticReadHead, :should_break, method, orig_ind),
-        Expr(:REPLACE_THIS_WITH_GOTOIFNOT_AT_END),
-        call_expr(Base, :getindex, GlobalRef(Core, :Symbol)),
-        call_expr(Base, :getindex, GlobalRef(Core, :Any)),
-    ]
+
+    stmt_count = enter_debug_statements_count(slot_created_ons, orig_ind)
+    statements = Vector{Any}(undef, stmt_count)
+    statements[1] = call_expr(MagneticReadHead, :should_break, method, orig_ind)
+    statements[2] = Expr(:gotoifnot, Core.SSAValue(ind), ind + stmt_count - 1)
+    statements[3] = Tuple(slotnames)
+    statements[4] = call_expr(MagneticReadHead, :init_variables_list, length(slotnames))
+
     stop_cond_ssa = Core.SSAValue(ind)
     # Skip the placeholder
     names_ssa = Core.SSAValue(ind + 2)
     values_ssa = Core.SSAValue(ind + 3)
     cur_ind = ind + 4
+    stmt_ii = 5
     # Now we store all of the slots that have values assigned to them
     for (slotind, (slotname, slot_created_on)) in enumerate(zip(slotnames, slot_created_ons))
         orig_ind > slot_created_on || continue
         slot = Core.SlotNumber(slotind)
-        append!(statements, (
-            Expr(:isdefined, slot),             # cur_ind
-            Expr(:gotoifnot, Core.SSAValue(cur_ind), cur_ind + 4),    # cur_ind + 1
-            call_expr(Base, :push!, names_ssa, QuoteNode(slotname)),  # cur_ind + 2
-            call_expr(Base, :push!, values_ssa, slot)   # cur_ind + 3
-        ))
+        statements[stmt_ii] = Expr(:isdefined, slot)
+        statements[stmt_ii+1] = Expr(:gotoifnot, Core.SSAValue(cur_ind), cur_ind + 3)
+        statements[stmt_ii+2] = call_expr(Base, :setindex!, values_ssa, slot, slotind)
 
-        cur_ind += 4
+        cur_ind += 3
+        stmt_ii += 3
     end
 
-    push!(statements, call_expr(
+    statements[end-1] = call_expr(
         MagneticReadHead, :break_action,
         method,
         orig_ind,
-        names_ssa, values_ssa)
+        names_ssa, values_ssa
     )
     # We now know how many statements we added so can set how far we are going to jump in the inital condition.
-    statements[2] = Expr(:gotoifnot, stop_cond_ssa, ind + length(statements))
-    push!(statements, stmt)  # last put im the original statement -- this is where we jump to
+    statements[end] = stmt  # last put im the original statement -- this is where we jump to
+    #Core.println(statements)
+    #@assert all(ii->isdefined(statements, ii), eachindex(statements))
     return statements
 end
 
@@ -169,7 +189,7 @@ function enter_debug_statements_count(slot_created_ons, orig_ind)
 
     for slot_created_on in slot_created_ons
         if orig_ind > slot_created_on
-            n_statements  += 4
+            n_statements  += 3
         end
     end
     n_statements += 2
@@ -181,13 +201,17 @@ end
 This is the transform for the debugger cassette pass.
 it is the main method of this file, and calls all the ones defined earlier.
 """
-function instrument!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflection)
+@inline function instrument!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflection)
     ir = reflection.code_info
 
     slot_created_ons = created_on(reflection)
     extended_insert_statements!(
         ir.code, ir.codelocs,
-        (stmt, i) -> stmt isa Expr ? enter_debug_statements_count(slot_created_ons, i) : nothing,
+        (stmt, ii) -> begin
+            stmt isa Expr || return nothing
+            ii>1 && @inbounds(ir.codelocs[ii]==ir.codelocs[ii-1]) && return nothing
+            return enter_debug_statements_count(slot_created_ons, ii)
+        end,
         (stmt, i, orig_i) -> enter_debug_statements(
             ir.slotnames, slot_created_ons, reflection.method,
             stmt, i, orig_i
