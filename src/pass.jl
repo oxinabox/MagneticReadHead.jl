@@ -61,55 +61,82 @@ function extended_insert_statements!(code, codelocs, stmtcount, newstmts)
     end
 end
 
+
 """
-    created_on
-Given an `Cassette.Reflection` returns a vector the same length as slotnames,
-which each entry is the ir statment index for where the coresponding variable was delcared
+    slot_assign_insts(ci, nargs)
+Identifies which instruction indexes a slot is assigned on.
 """
-@inline function created_on(reflection)
+@inline function slot_assign_insts(ci, nargs)
     # This is a simplification of
     # https://github.com/JuliaLang/julia/blob/236df47251c203c71abd0604f2f19bf1f9c639fd/base/compiler/ssair/slot2ssa.jl#L47
 
-    ir = reflection.code_info
-    created_stmt_ind = fill(typemax(Int), length(ir.slotnames))
-    banned = falses(length(ir.slotnames))
-
-    banned[1] = true  # Don't need #self
+    safe_uses = [Int[]  for _ in 1:length(ci.slotnames)]
 
     # all the arguments are created at start
-    nargs = reflection.method.nargs
-    if nargs > length(created_stmt_ind)
-        error("More arguments than slots")
-    end
     for id in 1 : nargs
-        created_stmt_ind[id] = 0
+        push!(safe_uses[id], 0)
     end
 
     # Scan for assignments or for uses
-    for (ii, stmt) in enumerate(ir.code)
-        if stmt isa Core.NewvarNode
-            id = stmt.slot.id
-            banned[id] = true
-        elseif isexpr(stmt, :(=)) && stmt.args[1] isa Core.SlotNumber
+    for (ii, stmt) in enumerate(ci.code)
+        if isexpr(stmt, :(=)) && stmt.args[1] isa Core.SlotNumber
             id = stmt.args[1].id
-            created_stmt_ind[id] = min(created_stmt_ind[id], ii)
-        elseif isexpr(stmt, :call)
-            for arg in stmt.args
-                if arg isa Core.SlotNumber
-                    id = arg.id
-                    created_stmt_ind[id] = min(created_stmt_ind[id], ii)
-                end
-            end
+            push!(safe_uses[id], ii)
         end
     end
 
-    for id in eachindex(banned)
-        if banned[id]
-            created_stmt_ind[id] = typemax(Int)
-        end
-    end
-    return created_stmt_ind
+    return safe_uses
 end
+
+"""
+    solve_isdefined_map(ci, nargs)
+Returns a vector which maps from statement index
+to a list of slot_ids that are definately defined at that index
+"""
+solve_isdefined_map(reflection) = solve_isdefined_map(reflection.code_info, reflection.method.nargs)
+function solve_isdefined_map(ci, nargs)
+    @assert nargs >= 1  # must be at least one for #self
+    si = slot_assign_insts(ci, nargs)
+    cfg = Core.Compiler.compute_basic_blocks(ci.code)
+    domtree = Core.Compiler.construct_domtree(cfg)
+
+    isdefined_on = [Int[] for _ in 1:length(ci.code)]
+    done = Int[]
+    for (slotid, safe_insts) in enumerate(si)
+        empty!(done)
+        for safe_inst in safe_insts
+            cur_block_ii = Core.Compiler.block_for_inst(cfg, safe_inst)
+            cur_block_ii ∈ done && continue
+            push!(done, cur_block_ii)
+
+            cur_block = cfg.blocks[cur_block_ii]
+            # mark this defined on all remaining statements in this first block
+            for stmt_ii in (safe_inst+1):cur_block.stmts.stop
+                push!(isdefined_on[stmt_ii], slotid)
+            end
+            # And now in all blocks after (i.e. that are dominated)
+            dominated_block_inds = Core.Compiler.dominated(domtree, cur_block_ii)
+            iter_state = Core.Compiler.iterate(dominated_block_inds)
+            @assert(Core.Compiler.first(iter_state) == cur_block_ii)
+            # Skip the first as that is cur_block
+            iter_state = Core.Compiler.iterate(iter_state...)
+
+            while iter_state !== nothing
+                cur_block_ii, _ = iter_state
+                cur_block_ii ∈ done && break  # anything deeper is already done
+                push!(done, cur_block_ii)
+
+                cur_block = cfg.blocks[cur_block_ii]
+                for stmt_ii in cur_block.stmts.start : cur_block.stmts.stop
+                    push!(isdefined_on[stmt_ii], slotid)
+                end
+                iter_state
+            end  # looping over blocks
+        end  # looping over `uses`
+    end  # looping over slots
+    return isdefined_on
+end
+
 
 """
     call_expr([mod], func, args...)
@@ -136,65 +163,30 @@ show the debugging prompt.
  - orig_ind: the index in the original code IR for where this is being inserted. (before other debug statements were inserted above)
 """
 @inline function enter_debug_statements(
-    slotnames, slot_created_ons, method::Method,
+    slotnames, isdefined_map, method::Method,
     stmt, ind::Int, orig_ind::Int
     )
 
-    stmt_count = enter_debug_statements_count(slot_created_ons, orig_ind)
+    stmt_count = 6
+    defined_slotids = isdefined_map[orig_ind]
     statements = Vector{Any}(undef, stmt_count)
     statements[1] = call_expr(MagneticReadHead, :should_break, method, orig_ind)
-    statements[2] = Expr(:gotoifnot, Core.SSAValue(ind), ind + stmt_count - 1)
-    statements[3] = Tuple(slotnames)
-    statements[4] = call_expr(MagneticReadHead, :init_variables_list, length(slotnames))
-
-    stop_cond_ssa = Core.SSAValue(ind)
-    # Skip the placeholder
-    names_ssa = Core.SSAValue(ind + 2)
-    values_ssa = Core.SSAValue(ind + 3)
-    cur_ind = ind + 4
-    stmt_ii = 5
-    # Now we store all of the slots that have values assigned to them
-    for (slotind, (slotname, slot_created_on)) in enumerate(zip(slotnames, slot_created_ons))
-        orig_ind > slot_created_on || continue
-        slot = Core.SlotNumber(slotind)
-        statements[stmt_ii] = Expr(:isdefined, slot)
-        statements[stmt_ii+1] = Expr(:gotoifnot, Core.SSAValue(cur_ind), cur_ind + 3)
-        statements[stmt_ii+2] = call_expr(Base, :setindex!, values_ssa, slot, slotind)
-
-        cur_ind += 3
-        stmt_ii += 3
-    end
-
-    statements[end-1] = call_expr(
+    statements[2] = Expr(:gotoifnot, Core.SSAValue(ind), ind + stmt_count - 1)  # go to last statement (i.e. the original stmt)
+    statements[3] = Tuple(slotnames[defined_slotids])
+    statements[4] = Tuple(Core.SlotNumber.(defined_slotids))
+    names_ssa = Core.SSAValue(ind+2)
+    values_ssa = Core.SSAValue(ind+3)
+    statements[5] = call_expr(
         MagneticReadHead, :break_action,
         method,
         orig_ind,
         names_ssa, values_ssa
     )
-    # We now know how many statements we added so can set how far we are going to jump in the inital condition.
-    statements[end] = stmt  # last put im the original statement -- this is where we jump to
+    statements[6] = stmt  # last put im the original statement -- this is where we jump to
     #Core.println(statements)
-    #@assert all(ii->isdefined(statements, ii), eachindex(statements))
     return statements
 end
 
-"""
-    enter_debug_statements_count(slot_created_ons, orig_ind)
-returns the length of the corresponding `enter_debug_statements` call.
-"""
-function enter_debug_statements_count(slot_created_ons, orig_ind)
-    # this function intentionally mirrors structure of enter_debug_statements
-    # for ease of updating to match it
-    n_statements = 4
-
-    for slot_created_on in slot_created_ons
-        if orig_ind > slot_created_on
-            n_statements  += 3
-        end
-    end
-    n_statements += 2
-    return n_statements
-end
 
 """
     instrument!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflection)
@@ -204,16 +196,18 @@ it is the main method of this file, and calls all the ones defined earlier.
 @inline function instrument!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflection)
     ir = reflection.code_info
 
-    slot_created_ons = created_on(reflection)
+    isdefined_map = solve_isdefined_map(reflection)
     extended_insert_statements!(
         ir.code, ir.codelocs,
         (stmt, ii) -> begin
+            # We instrument every new line, before the line.
+            # So the first statement of the line is the one we replace
             stmt isa Expr || return nothing
             ii>1 && @inbounds(ir.codelocs[ii]==ir.codelocs[ii-1]) && return nothing
-            return enter_debug_statements_count(slot_created_ons, ii)
+            return 6
         end,
         (stmt, i, orig_i) -> enter_debug_statements(
-            ir.slotnames, slot_created_ons, reflection.method,
+            ir.slotnames, isdefined_map, reflection.method,
             stmt, i, orig_i
         );
     )
