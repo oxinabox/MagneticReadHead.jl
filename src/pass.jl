@@ -10,15 +10,9 @@ if should_break  # i.e. this breakpoint is active
     call break_action(variables)  # launch the debugging REPL etc.
 end
 ```
-The reality is a bit more complicated, as you can't ask if a variable is defined
-before it is declared. But that is the principle.
+The reality is a bit more complicated, as we actually workouit what is defined at
+compile time.
 ==#
-"""
-    VariableNotDefined()
-A sentinel singleton to make that a variable (slot) is not defined.
-"""
-struct VariableNotDefined end
-@inline init_variables_list(nslots)  = Any[VariableNotDefined() for _ in 1:nslots]
 
 """
     extended_insert_statements!(code, codelocs, stmtcount, newstmts)
@@ -63,32 +57,6 @@ end
 
 
 """
-    slot_assign_insts(ci, nargs)
-Identifies which instruction indexes a slot is assigned on.
-"""
-@inline function slot_assign_insts(ci, nargs)
-    # This is a simplification of
-    # https://github.com/JuliaLang/julia/blob/236df47251c203c71abd0604f2f19bf1f9c639fd/base/compiler/ssair/slot2ssa.jl#L47
-
-    safe_uses = [Int[]  for _ in 1:length(ci.slotnames)]
-
-    # all the arguments are created at start
-    for id in 1 : nargs
-        push!(safe_uses[id], 0)
-    end
-
-    # Scan for assignments or for uses
-    for (ii, stmt) in enumerate(ci.code)
-        if isexpr(stmt, :(=)) && stmt.args[1] isa Core.SlotNumber
-            id = stmt.args[1].id
-            push!(safe_uses[id], ii)
-        end
-    end
-
-    return safe_uses
-end
-
-"""
     solve_isdefined_map(ci, nargs)
 Returns a vector which maps from statement index
 to a list of slot_ids that are definately defined at that index
@@ -96,47 +64,31 @@ to a list of slot_ids that are definately defined at that index
 solve_isdefined_map(reflection) = solve_isdefined_map(reflection.code_info, reflection.method.nargs)
 function solve_isdefined_map(ci, nargs)
     @assert nargs >= 1  # must be at least one for #self
-    si = slot_assign_insts(ci, nargs)
     cfg = Core.Compiler.compute_basic_blocks(ci.code)
     domtree = Core.Compiler.construct_domtree(cfg)
 
-    isdefined_on = [Int[] for _ in 1:length(ci.code)]
-    done = Int[]
-    for (slotid, safe_insts) in enumerate(si)
-        empty!(done)
-        for safe_inst in safe_insts
-            cur_block_ii = Core.Compiler.block_for_inst(cfg, safe_inst)
-            cur_block_ii ∈ done && continue
-            push!(done, cur_block_ii)
-
-            cur_block = cfg.blocks[cur_block_ii]
-            # mark this defined on all remaining statements in this first block
-            for stmt_ii in (safe_inst+1):cur_block.stmts.stop
-                push!(isdefined_on[stmt_ii], slotid)
-            end
-            # And now in all blocks after (i.e. that are dominated)
-            dominated_block_inds = Core.Compiler.dominated(domtree, cur_block_ii)
-            iter_state = Core.Compiler.iterate(dominated_block_inds)
-            @assert(Core.Compiler.first(iter_state) == cur_block_ii)
-            # Skip the first as that is cur_block
-            iter_state = Core.Compiler.iterate(iter_state...)
-
-            while iter_state !== nothing
-                cur_block_ii, _ = iter_state
-                cur_block_ii ∈ done && break  # anything deeper is already done
-                push!(done, cur_block_ii)
-
-                cur_block = cfg.blocks[cur_block_ii]
-                for stmt_ii in cur_block.stmts.start : cur_block.stmts.stop
-                    push!(isdefined_on[stmt_ii], slotid)
+    isdefined_on = Vector{Vector{Int}}(undef, length(ci.code))
+    function proc_block!(cur_block_ii, defined_slots)
+        block = cfg.blocks[cur_block_ii]
+        domnode = Core.Compiler.getindex(domtree.nodes, cur_block_ii)
+        for stmt_ii in block.stmts.start : block.stmts.stop
+            stmt = ci.code[stmt_ii]
+            if isexpr(stmt, :(=)) && stmt.args[1] isa Core.SlotNumber
+                id = stmt.args[1].id
+                if id ∉ defined_slots
+                    defined_slots = copy(defined_slots)
+                    defined_slots = push!(defined_slots, id)
                 end
-                iter_state
-            end  # looping over blocks
-        end  # looping over `uses`
-    end  # looping over slots
+            end
+            isdefined_on[stmt_ii] = defined_slots
+        end
+        Core.Compiler.foreach(domnode.children) do block_ii
+            proc_block!(block_ii, defined_slots)
+        end
+    end
+    proc_block!(1, collect(1:nargs))
     return isdefined_on
 end
-
 
 """
     call_expr([mod], func, args...)
