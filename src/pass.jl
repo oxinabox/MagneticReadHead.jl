@@ -72,6 +72,11 @@ function solve_isdefined_map(ci, nargs)
         block = cfg.blocks[cur_block_ii]
         domnode = Core.Compiler.getindex(domtree.nodes, cur_block_ii)
         for stmt_ii in block.stmts.start : block.stmts.stop
+            # We want to know what has been defined before we run this statement
+            # i.e. what can occur on RHS of assigment or in a call
+            isdefined_on[stmt_ii] = defined_slots
+
+            # Now update `defined_slots` for future statements
             stmt = ci.code[stmt_ii]
             if isexpr(stmt, :(=)) && stmt.args[1] isa Core.SlotNumber
                 id = stmt.args[1].id
@@ -80,13 +85,14 @@ function solve_isdefined_map(ci, nargs)
                     defined_slots = push!(defined_slots, id)
                 end
             end
-            isdefined_on[stmt_ii] = defined_slots
         end
         Core.Compiler.foreach(domnode.children) do block_ii
             proc_block!(block_ii, defined_slots)
         end
     end
-    proc_block!(1, collect(1:nargs))
+
+    # Initial defined slots start from 2 rather than 1 too skip #self#
+    proc_block!(1, collect(2:nargs))
     return isdefined_on
 end
 
@@ -125,7 +131,7 @@ show the debugging prompt.
     statements[1] = call_expr(MagneticReadHead, :should_break, method, orig_ind)
     statements[2] = Expr(:gotoifnot, Core.SSAValue(ind), ind + stmt_count - 1)  # go to last statement (i.e. the original stmt)
     statements[3] = Tuple(slotnames[defined_slotids])
-    statements[4] = Tuple(Core.SlotNumber.(defined_slotids))
+    statements[4] = call_expr(Core, :tuple, Core.SlotNumber.(defined_slotids)...)
     names_ssa = Core.SSAValue(ind+2)
     values_ssa = Core.SSAValue(ind+3)
     statements[5] = call_expr(
@@ -134,7 +140,7 @@ show the debugging prompt.
         orig_ind,
         names_ssa, values_ssa
     )
-    statements[6] = stmt  # last put im the original statement -- this is where we jump to
+    statements[6] = stmt  # last put in the original statement -- this is where we jump to
     #Core.println(statements)
     return statements
 end
