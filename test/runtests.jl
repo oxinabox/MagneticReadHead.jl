@@ -2,6 +2,8 @@ using Revise: Revise
 using MagneticReadHead
 using Test
 
+using TimerOutputs: TimerOutputs
+
 test_files = (
     "test_behavour.jl",
     "test_breadcrumbs.jl",
