@@ -80,12 +80,7 @@ end
 What to do when a breakpoint is hit
 """
 function break_action(meth, statement_ind, slotnames, slotvals)
-   variables = LittleDict(
-      name=>val
-      for (name,val) in zip(slotnames, slotvals)
-         if val!==VariableNotDefined()
-   )
-
+   variables = LittleDict(slotnames, slotvals)
    breakpoint_hit(meth, statement_ind, variables)
 
    code_word = iron_repl(meth, statement_ind, variables)

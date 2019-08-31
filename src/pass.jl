@@ -10,15 +10,9 @@ if should_break  # i.e. this breakpoint is active
     call break_action(variables)  # launch the debugging REPL etc.
 end
 ```
-The reality is a bit more complicated, as you can't ask if a variable is defined
-before it is declared. But that is the principle.
+The reality is a bit more complicated, as we actually workouit what is defined at
+compile time.
 ==#
-"""
-    VariableNotDefined()
-A sentinel singleton to make that a variable (slot) is not defined.
-"""
-struct VariableNotDefined end
-@inline init_variables_list(nslots)  = Any[VariableNotDefined() for _ in 1:nslots]
 
 """
     extended_insert_statements!(code, codelocs, stmtcount, newstmts)
@@ -61,54 +55,45 @@ function extended_insert_statements!(code, codelocs, stmtcount, newstmts)
     end
 end
 
+
 """
-    created_on
-Given an `Cassette.Reflection` returns a vector the same length as slotnames,
-which each entry is the ir statment index for where the coresponding variable was delcared
+    solve_isdefined_map(ci, nargs)
+Returns a vector which maps from statement index
+to a list of slot_ids that are definately defined at that index
 """
-@inline function created_on(reflection)
-    # This is a simplification of
-    # https://github.com/JuliaLang/julia/blob/236df47251c203c71abd0604f2f19bf1f9c639fd/base/compiler/ssair/slot2ssa.jl#L47
+solve_isdefined_map(reflection) = solve_isdefined_map(reflection.code_info, reflection.method.nargs)
+function solve_isdefined_map(ci, nargs)
+    @assert nargs >= 1  # must be at least one for #self
+    cfg = Core.Compiler.compute_basic_blocks(ci.code)
+    domtree = Core.Compiler.construct_domtree(cfg)
 
-    ir = reflection.code_info
-    created_stmt_ind = fill(typemax(Int), length(ir.slotnames))
-    banned = falses(length(ir.slotnames))
+    isdefined_on = Vector{Vector{Int}}(undef, length(ci.code))
+    function proc_block!(cur_block_ii, defined_slots)
+        block = cfg.blocks[cur_block_ii]
+        domnode = Core.Compiler.getindex(domtree.nodes, cur_block_ii)
+        for stmt_ii in block.stmts.start : block.stmts.stop
+            # We want to know what has been defined before we run this statement
+            # i.e. what can occur on RHS of assigment or in a call
+            isdefined_on[stmt_ii] = defined_slots
 
-    banned[1] = true  # Don't need #self
-
-    # all the arguments are created at start
-    nargs = reflection.method.nargs
-    if nargs > length(created_stmt_ind)
-        error("More arguments than slots")
-    end
-    for id in 1 : nargs
-        created_stmt_ind[id] = 0
-    end
-
-    # Scan for assignments or for uses
-    for (ii, stmt) in enumerate(ir.code)
-        if stmt isa Core.NewvarNode
-            id = stmt.slot.id
-            banned[id] = true
-        elseif isexpr(stmt, :(=)) && stmt.args[1] isa Core.SlotNumber
-            id = stmt.args[1].id
-            created_stmt_ind[id] = min(created_stmt_ind[id], ii)
-        elseif isexpr(stmt, :call)
-            for arg in stmt.args
-                if arg isa Core.SlotNumber
-                    id = arg.id
-                    created_stmt_ind[id] = min(created_stmt_ind[id], ii)
+            # Now update `defined_slots` for future statements
+            stmt = ci.code[stmt_ii]
+            if isexpr(stmt, :(=)) && stmt.args[1] isa Core.SlotNumber
+                id = stmt.args[1].id
+                if id ∉ defined_slots
+                    defined_slots = copy(defined_slots)
+                    defined_slots = push!(defined_slots, id)
                 end
             end
         end
-    end
-
-    for id in eachindex(banned)
-        if banned[id]
-            created_stmt_ind[id] = typemax(Int)
+        Core.Compiler.foreach(domnode.children) do block_ii
+            proc_block!(block_ii, defined_slots)
         end
     end
-    return created_stmt_ind
+
+    # Initial defined slots start from 2 rather than 1 too skip #self#
+    proc_block!(1, collect(2:nargs))
+    return isdefined_on
 end
 
 """
@@ -136,65 +121,30 @@ show the debugging prompt.
  - orig_ind: the index in the original code IR for where this is being inserted. (before other debug statements were inserted above)
 """
 @inline function enter_debug_statements(
-    slotnames, slot_created_ons, method::Method,
+    slotnames, isdefined_map, method::Method,
     stmt, ind::Int, orig_ind::Int
     )
 
-    stmt_count = enter_debug_statements_count(slot_created_ons, orig_ind)
+    stmt_count = 6
+    defined_slotids = isdefined_map[orig_ind]
     statements = Vector{Any}(undef, stmt_count)
     statements[1] = call_expr(MagneticReadHead, :should_break, method, orig_ind)
-    statements[2] = Expr(:gotoifnot, Core.SSAValue(ind), ind + stmt_count - 1)
-    statements[3] = Tuple(slotnames)
-    statements[4] = call_expr(MagneticReadHead, :init_variables_list, length(slotnames))
-
-    stop_cond_ssa = Core.SSAValue(ind)
-    # Skip the placeholder
-    names_ssa = Core.SSAValue(ind + 2)
-    values_ssa = Core.SSAValue(ind + 3)
-    cur_ind = ind + 4
-    stmt_ii = 5
-    # Now we store all of the slots that have values assigned to them
-    for (slotind, (slotname, slot_created_on)) in enumerate(zip(slotnames, slot_created_ons))
-        orig_ind > slot_created_on || continue
-        slot = Core.SlotNumber(slotind)
-        statements[stmt_ii] = Expr(:isdefined, slot)
-        statements[stmt_ii+1] = Expr(:gotoifnot, Core.SSAValue(cur_ind), cur_ind + 3)
-        statements[stmt_ii+2] = call_expr(Base, :setindex!, values_ssa, slot, slotind)
-
-        cur_ind += 3
-        stmt_ii += 3
-    end
-
-    statements[end-1] = call_expr(
+    statements[2] = Expr(:gotoifnot, Core.SSAValue(ind), ind + stmt_count - 1)  # go to last statement (i.e. the original stmt)
+    statements[3] = Tuple(slotnames[defined_slotids])
+    statements[4] = call_expr(Core, :tuple, Core.SlotNumber.(defined_slotids)...)
+    names_ssa = Core.SSAValue(ind+2)
+    values_ssa = Core.SSAValue(ind+3)
+    statements[5] = call_expr(
         MagneticReadHead, :break_action,
         method,
         orig_ind,
         names_ssa, values_ssa
     )
-    # We now know how many statements we added so can set how far we are going to jump in the inital condition.
-    statements[end] = stmt  # last put im the original statement -- this is where we jump to
+    statements[6] = stmt  # last put in the original statement -- this is where we jump to
     #Core.println(statements)
-    #@assert all(ii->isdefined(statements, ii), eachindex(statements))
     return statements
 end
 
-"""
-    enter_debug_statements_count(slot_created_ons, orig_ind)
-returns the length of the corresponding `enter_debug_statements` call.
-"""
-function enter_debug_statements_count(slot_created_ons, orig_ind)
-    # this function intentionally mirrors structure of enter_debug_statements
-    # for ease of updating to match it
-    n_statements = 4
-
-    for slot_created_on in slot_created_ons
-        if orig_ind > slot_created_on
-            n_statements  += 3
-        end
-    end
-    n_statements += 2
-    return n_statements
-end
 
 """
     instrument!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflection)
@@ -204,16 +154,18 @@ it is the main method of this file, and calls all the ones defined earlier.
 @inline function instrument!(::Type{<:HandEvalCtx}, reflection::Cassette.Reflection)
     ir = reflection.code_info
 
-    slot_created_ons = created_on(reflection)
+    isdefined_map = solve_isdefined_map(reflection)
     extended_insert_statements!(
         ir.code, ir.codelocs,
         (stmt, ii) -> begin
+            # We instrument every new line, before the line.
+            # So the first statement of the line is the one we replace
             stmt isa Expr || return nothing
             ii>1 && @inbounds(ir.codelocs[ii]==ir.codelocs[ii-1]) && return nothing
-            return enter_debug_statements_count(slot_created_ons, ii)
+            return 6
         end,
         (stmt, i, orig_i) -> enter_debug_statements(
-            ir.slotnames, slot_created_ons, reflection.method,
+            ir.slotnames, isdefined_map, reflection.method,
             stmt, i, orig_i
         );
     )

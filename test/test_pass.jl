@@ -91,3 +91,11 @@ end
     res = Cassette.recurse(ctx, danger19)
     @test res == 2
 end
+
+@testset "TimerOutputs based breaking case" begin
+    # This is the case from https://github.com/oxinabox/MagneticReadHead.jl/issues/56
+    # if that was not fixed then the `@run` line will cause errors
+    iob = IOBuffer()
+    @run TimerOutputs.print_header(iob, 0.5, 0.1, 3, 3, 7, false, true, 11, true, "oio")
+    @test !isempty(String(take!(iob)))
+end
