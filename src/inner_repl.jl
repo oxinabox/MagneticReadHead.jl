@@ -51,8 +51,9 @@ function run_repl(name2var, eval_module)
     local code_ast
     while true
         code_ast = get_user_input()
-        if haskey(actions, code_ast)
-            return code_ast # Send the codeword back
+        # TODO: use REPLMaker instead of this hack ?
+        if length(code_ast.args) >= 2 && haskey(actions, code_ast.args[2])
+            return code_ast.args[2]
         end
         code_ast = subnames(name2var, code_ast)
         eval_and_display(code_ast, eval_module)
