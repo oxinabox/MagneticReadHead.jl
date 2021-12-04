@@ -160,9 +160,7 @@ it is the main method of this file, and calls all the ones defined earlier.
         (stmt, ii) -> begin
             # We instrument every new line, before the line.
             # So the first statement of the line is the one we replace
-            stmt isa Expr ||
-            stmt isa Core.ReturnNode ||
-            return nothing
+            stmt isa Expr || stmt isa Core.ReturnNode || return nothing
             ii>1 && @inbounds(ir.codelocs[ii]==ir.codelocs[ii-1]) && return nothing
             return 6
         end,
