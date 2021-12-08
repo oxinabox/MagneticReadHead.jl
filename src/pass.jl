@@ -65,7 +65,7 @@ solve_isdefined_map(reflection) = solve_isdefined_map(reflection.code_info, refl
 function solve_isdefined_map(ci, nargs)
     @assert nargs >= 1  # must be at least one for #self
     cfg = Core.Compiler.compute_basic_blocks(ci.code)
-    domtree = Core.Compiler.construct_domtree(cfg)
+    domtree = Core.Compiler.construct_domtree(cfg.blocks)
 
     isdefined_on = Vector{Vector{Int}}(undef, length(ci.code))
     function proc_block!(cur_block_ii, defined_slots)
@@ -129,7 +129,7 @@ show the debugging prompt.
     defined_slotids = isdefined_map[orig_ind]
     statements = Vector{Any}(undef, stmt_count)
     statements[1] = call_expr(MagneticReadHead, :should_break, method, orig_ind)
-    statements[2] = Expr(:gotoifnot, Core.SSAValue(ind), ind + stmt_count - 1)  # go to last statement (i.e. the original stmt)
+    statements[2] = Core.GotoIfNot(Core.SSAValue(ind), ind + stmt_count - 1)  # go to last statement (i.e. the original stmt)
     statements[3] = Tuple(slotnames[defined_slotids])
     statements[4] = call_expr(Core, :tuple, Core.SlotNumber.(defined_slotids)...)
     names_ssa = Core.SSAValue(ind+2)
@@ -160,7 +160,7 @@ it is the main method of this file, and calls all the ones defined earlier.
         (stmt, ii) -> begin
             # We instrument every new line, before the line.
             # So the first statement of the line is the one we replace
-            stmt isa Expr || return nothing
+            stmt isa Expr || stmt isa Core.ReturnNode || return nothing
             ii>1 && @inbounds(ir.codelocs[ii]==ir.codelocs[ii-1]) && return nothing
             return 6
         end,

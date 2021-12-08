@@ -12,13 +12,12 @@ OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 
 [compat]
-Cassette = "0.2.2"
-CodeTracking = "0.5.0"
+Cassette = "0.3"
+CodeTracking = "1.0"
 OrderedCollections = "1.1"
-Revise = "2.1.3"
+Revise = "3.1.5"
 TimerOutputs = "~0.5.0"
-julia = "1.1"
-
+julia = "1.6"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
